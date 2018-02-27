@@ -11,8 +11,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/airking05/go-ccex-api-client/api"
-	"github.com/airking05/go-ccex-api-client/models"
+	"github.com/fxpgr/go-ccex-api-client/api"
+	"github.com/fxpgr/go-ccex-api-client/models"
 )
 
 func main() {
