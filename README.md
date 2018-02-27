@@ -41,6 +41,7 @@ func main() {
 |----------|-------------|----------|-----------------|--------|
 | Bitflyer | Done        | Done     | Done            | Done   |
 | Poloniex | Done        | Done     | Done            | Done   |
+| Hitbtc   | Done        | Done     | Done            | Done   |
 
 ## PrivateAPI
 
