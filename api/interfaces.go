@@ -34,7 +34,7 @@ type ExchangePrivateRepository interface {
 func NewExchangePrivateRepository(exchangeName string, apikey string, seckey string) (ExchangePrivateRepository, error) {
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
-		return private.NewBitflyerApi(apikey, seckey)
+		return private.NewBitflyerPrivateApi(apikey, seckey)
 	case "poloniex":
 		return private.NewPoloniexApi(apikey, seckey)
 	}

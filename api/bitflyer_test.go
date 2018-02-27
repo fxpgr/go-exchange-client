@@ -43,6 +43,15 @@ func newTestBitflyerPublicClient(rt http.RoundTripper) ExchangePublicRepository 
 	return client
 }
 
+func newTestBitflyerPrivateClient(rt http.RoundTripper) ExchangePublicRepository {
+	endpoint := "http://localhost:4243"
+	client,err := public.NewTestBitflyerPublicApi(endpoint,http.Client{Transport: rt})
+	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
 func TestBitflyerRate(t *testing.T) {
 	t.Parallel()
 	jsonBitflyerTicker :=  `{
