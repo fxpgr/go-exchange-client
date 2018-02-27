@@ -1,4 +1,5 @@
 package public
+
 import (
 	"encoding/json"
 	"net/http"
@@ -8,9 +9,9 @@ import (
 	"time"
 
 	"github.com/antonholmquist/jason"
-	"github.com/pkg/errors"
 	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -18,7 +19,7 @@ const (
 )
 
 type PoloniexApiConfig struct {
-	BaseURL    string
+	BaseURL           string
 	RateCacheDuration time.Duration
 }
 
@@ -66,7 +67,6 @@ func parsePoloCurrencyPair(s string) (string, string, error) {
 
 	return xs[0], xs[1], nil
 }
-
 
 type PoloniexApi struct {
 	volumeMap       map[string]map[string]float64

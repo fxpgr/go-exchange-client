@@ -1,15 +1,16 @@
 package public
+
 import (
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/fxpgr/go-ccex-api-client/models"
-	"io/ioutil"
-	"github.com/Jeffail/gabs"
 	"fmt"
+	"github.com/Jeffail/gabs"
+	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/pkg/errors"
+	"io/ioutil"
 	"strings"
 )
 
@@ -18,7 +19,7 @@ const (
 )
 
 type HitbtcApiConfig struct {
-	BaseURL    string
+	BaseURL           string
 	RateCacheDuration time.Duration
 }
 
@@ -61,13 +62,12 @@ type HitbtcApi struct {
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
-	
+
 	settlements []string
 
 	m *sync.Mutex
 	c *HitbtcApiConfig
 }
-
 
 func (h *HitbtcApi) publicApiUrl(command string) string {
 	return h.c.BaseURL + "/public/" + command

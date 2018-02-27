@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/Jeffail/gabs"
-	"github.com/pkg/errors"
 	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -19,51 +19,38 @@ const (
 )
 
 func NewBitflyerPublicApi() (*BitflyerApi, error) {
-	conf := &BitflyerApiConfig{
+	api := &BitflyerApi{
 		BaseURL:           BITFLYER_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-	}
-
-	api := &BitflyerApi{
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
 		m: new(sync.Mutex),
-		c: conf,
 	}
 	api.fetchSettlements()
 	return api, nil
 }
 
-func NewBitflyerPublicApiUsingConfigFunc(f func(*BitflyerApiConfig)) (*BitflyerApi, error) {
-	conf := &BitflyerApiConfig{
-		BaseURL:           BITFLYER_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-	}
-	f(conf)
-
+func NewTestBitflyerPublicApi(baseUrl string, httpClient http.Client) (*BitflyerApi, error) {
 	api := &BitflyerApi{
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-
-		m: new(sync.Mutex),
-		c: conf,
+		BaseURL:           baseUrl,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        httpClient,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil
-}
-
-type BitflyerApiConfig struct {
-	Apikey     string
-	ApiSecret  string
-	BaseURL    string
-
-	RateCacheDuration time.Duration
 }
 
 type BitflyerApi struct {
+	BaseURL           string
+	RateCacheDuration time.Duration
+	HttpClient        http.Client
+
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
@@ -71,11 +58,10 @@ type BitflyerApi struct {
 	settlements []string
 
 	m *sync.Mutex
-	c *BitflyerApiConfig
 }
 
 func (b *BitflyerApi) publicApiUrl(command string) string {
-	return b.c.BaseURL + "/" + command
+	return b.BaseURL + "/" + command
 }
 
 func (b *BitflyerApi) fetchSettlements() error {
@@ -89,7 +75,7 @@ func (b *BitflyerApi) fetchRate() error {
 	b.rateMap = make(map[string]map[string]float64)
 	b.volumeMap = make(map[string]map[string]float64)
 	url := b.publicApiUrl("ticker")
-	resp, err := http.Get(url)
+	resp, err := b.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -144,7 +130,6 @@ func (b *BitflyerApi) fetchRate() error {
 	}
 	m[settlement] = volume
 
-
 	return nil
 }
 
@@ -153,7 +138,7 @@ func (b *BitflyerApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
 	defer b.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(b.rateLastUpdated) >= b.c.RateCacheDuration {
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
 		err := b.fetchRate()
 		if err != nil {
 			return nil, err
@@ -180,7 +165,7 @@ func (b *BitflyerApi) Volume(trading string, settlement string) (float64, error)
 	defer b.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(b.rateLastUpdated) >= b.c.RateCacheDuration {
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
 		err := b.fetchRate()
 		if err != nil {
 			return 0, err
@@ -206,7 +191,7 @@ func (b *BitflyerApi) Rate(trading string, settlement string) (float64, error) {
 	}
 
 	now := time.Now()
-	if now.Sub(b.rateLastUpdated) >= b.c.RateCacheDuration {
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
 		err := b.fetchRate()
 		if err != nil {
 			return 0, err
