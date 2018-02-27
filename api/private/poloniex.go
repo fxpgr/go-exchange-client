@@ -15,8 +15,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/airking05/go-ccex-api-client/logger"
-	"github.com/airking05/go-ccex-api-client/models"
+	"github.com/fxpgr/go-ccex-api-client/logger"
+	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/antonholmquist/jason"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"

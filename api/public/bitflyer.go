@@ -11,7 +11,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	"github.com/pkg/errors"
-	"github.com/airking05/go-ccex-api-client/models"
+	"github.com/fxpgr/go-ccex-api-client/models"
 )
 
 const (

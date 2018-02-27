@@ -1,17 +1,16 @@
 package api
 
 import (
-	"github.com/airking05/go-ccex-api-client/models"
-	"github.com/airking05/go-ccex-api-client/api/private"
+	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/fxpgr/go-ccex-api-client/api/private"
+	"github.com/fxpgr/go-ccex-api-client/api/public"
 	"github.com/pkg/errors"
 	"strings"
-	"github.com/airking05/go-ccex-api-client/api/public"
 )
 
 
 //go:generate mockery -name=ExchangePublicRepository
 type ExchangePublicRepository interface {
-	fetchRate() error
 	Volume(trading string, settlement string) (float64, error)
 	CurrencyPairs() ([]*models.CurrencyPair, error)
 	Rate(trading string, settlement string) (float64, error)
@@ -50,6 +49,8 @@ func NewExchangePublicRepository(exchangeName string) (ExchangePublicRepository,
 		return public.NewBitflyerPublicApi()
 	case "poloniex":
 		return public.NewPoloniexPublicApi()
+	case "hitbtc":
+		return public.NewHitbtcPublicApi()
 	}
 	return nil, errors.New("failed to init exchange api")
 }

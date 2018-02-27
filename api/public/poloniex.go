@@ -9,8 +9,8 @@ import (
 
 	"github.com/antonholmquist/jason"
 	"github.com/pkg/errors"
-	"github.com/airking05/go-ccex-api-client/logger"
-	"github.com/airking05/go-ccex-api-client/models"
+	"github.com/fxpgr/go-ccex-api-client/logger"
+	"github.com/fxpgr/go-ccex-api-client/models"
 )
 
 const (
@@ -18,10 +18,7 @@ const (
 )
 
 type PoloniexApiConfig struct {
-	Apikey     string
-	ApiSecret  string
 	BaseURL    string
-
 	RateCacheDuration time.Duration
 }
 
