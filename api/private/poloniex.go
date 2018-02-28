@@ -355,7 +355,7 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 		return "", errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
 	if orderNumberInt <= 0 {
-		return "", errors.Errorf("invalid order number %d", res.OrderNumber)
+		return "", errors.Errorf("invalid order number %v", res.OrderNumber)
 	}
 
 	return res.OrderNumber, nil
