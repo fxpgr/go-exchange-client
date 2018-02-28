@@ -58,7 +58,6 @@ func (p *PoloniexApi) privateApiUrl() string {
 }
 
 func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte, error) {
-	cli := &http.Client{}
 
 	val := url.Values{}
 	val.Add("command", command)
@@ -86,7 +85,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	req.Header.Add("Key", p.ApiKey)
 	req.Header.Add("Sign", hex.EncodeToString(sign))
 
-	res, err := cli.Do(req)
+	res, err := p.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request command %s", command)
 	}

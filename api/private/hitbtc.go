@@ -2,27 +2,21 @@ package private
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/antonholmquist/jason"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/fxpgr/go-ccex-api-client/logger"
-	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 )
 
 const (
-	HITBTC_BASE_URL = "https://poloniex.com"
+	HITBTC_BASE_URL = "https://api.hitbtc.com"
 )
 
 func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
@@ -57,12 +51,9 @@ func (h *HitbtcApi) privateApiUrl() string {
 	return h.BaseURL
 }
 
-func (h *HitbtcApi) privateApi(command string, args map[string]string) ([]byte, error) {
-	cli := &http.Client{}
+func (h *HitbtcApi) privateApi(method string, path string, args map[string]string) ([]byte, error) {
 
 	val := url.Values{}
-	val.Add("command", command)
-	val.Add("nonce", strconv.FormatInt(time.Now().UnixNano(), 10))
 	if args != nil {
 		for k, v := range args {
 			val.Add(k, v)
@@ -70,34 +61,25 @@ func (h *HitbtcApi) privateApi(command string, args map[string]string) ([]byte, 
 	}
 
 	reader := bytes.NewReader([]byte(val.Encode()))
-	req, err := http.NewRequest("POST", h.privateApiUrl(), reader)
+	req, err := http.NewRequest(method, h.privateApiUrl()+path, reader)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create request command %s", command)
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
-
-	mac := hmac.New(sha512.New, []byte(h.SecretKey))
-	_, err = mac.Write([]byte(val.Encode()))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to encrypt request")
-	}
-	sign := mac.Sum(nil)
-
+	req.SetBasicAuth(h.ApiKey,h.SecretKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Key", h.ApiKey)
-	req.Header.Add("Sign", hex.EncodeToString(sign))
 
-	res, err := cli.Do(req)
+	res, err := h.HttpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to request command %s", command)
+		return nil, errors.Wrapf(err, "failed to request command %s", path)
 	}
 	defer res.Body.Close()
 
 	resBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch result of command %s", command)
+		return nil, errors.Wrapf(err, "failed to fetch result of command %s", path)
 	}
 
-	logger.Get().Infof("[poloniex] private api called: cmd=%s req=%s, res=%.60s", command, spew.Sdump(args), string(resBody))
+	logger.Get().Infof("[hitbtc] private api called: cmd=%s req=%s, res=%.60s", path, spew.Sdump(args), string(resBody))
 
 	var errres errorResponse
 	err = json.Unmarshal(resBody, &errres)
@@ -112,19 +94,22 @@ func (h *HitbtcApi) privateApi(command string, args map[string]string) ([]byte, 
 }
 
 func (h *HitbtcApi) fetchFeeRate() (float64, error) {
-	var fee poloniexFeeRate
-
-	bs, err := h.privateApi("returnFeeInfo", nil)
+	purchaseFeeurl := "/api/2/trading/fee/ETHBTC"
+	method := "GET"
+	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
-
-	err = json.Unmarshal(bs, &fee)
+	purchaseFeeObject, err := jason.NewObjectFromBytes(resBody)
 	if err != nil {
-		return 0, err
+		return 1, err
 	}
-
-	return fee.TakerFee, nil
+	purchaseFeeMap := purchaseFeeObject.Map()
+	purchaseFee, err := purchaseFeeMap["takeLiquidityRate"].Float64()
+	if err != nil {
+		return 1, err
+	}
+	return purchaseFee, nil
 }
 
 func (h *HitbtcApi) PurchaseFeeRate() (float64, error) {
@@ -138,9 +123,9 @@ func (h *HitbtcApi) SellFeeRate() (float64, error) {
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	return nil, nil
 }
-
+/*
 func (h *HitbtcApi) Balances() (map[string]float64, error) {
-	bs, err := h.privateApi("returnBalances", nil)
+	bs, err := h.privateApi("GET","/api/2/trading/balance", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -378,3 +363,4 @@ func (h *HitbtcApi) Address(c string) (string, error) {
 
 	return addr, nil
 }
+*/
