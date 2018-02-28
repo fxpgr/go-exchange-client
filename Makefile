@@ -34,6 +34,5 @@ gotest:
 
 test: pretest gotest
 
-test-ci:
-    pretest
+test-ci: pretest
     goveralls -repotoken ${CI_TOKEN}
