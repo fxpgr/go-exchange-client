@@ -13,7 +13,7 @@ type ExchangePublicRepository interface {
 	Rate(trading string, settlement string) (float64, error)
 }
 
-func NewExchangePublicRepository(exchangeName string) (ExchangePublicRepository, error) {
+func NewClient(exchangeName string) (ExchangePublicRepository, error) {
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
 		return NewBitflyerPublicApi()

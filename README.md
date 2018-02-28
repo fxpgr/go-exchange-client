@@ -14,12 +14,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/fxpgr/go-ccex-api-client/api"
+	"github.com/fxpgr/go-ccex-api-client/api/public"
+	"github.com/fxpgr/go-ccex-api-client/api/private"
 	"github.com/fxpgr/go-ccex-api-client/models"
 )
 
 func main() {
-	bitflyerPublicApi,err := api.NewExchangePublicRepository("bitflyer")
+	bitflyerPublicApi,err := public.NewClient("bitflyer")
 	if err != nil {
     		panic(err)
     }
@@ -32,7 +33,7 @@ func main() {
     	fmt.Println(bitflyerPublicApi.Volume(v.Trading,v.Settlement))
     }
     
-    bitflyerPrivateApi,err := api.NewExchangePrivateRepository("bitflyer","APIKEY","SECRETKEY")
+    bitflyerPrivateApi,err := private.NewClient("bitflyer","APIKEY","SECRETKEY")
     bitflyerPrivateApi.Balances()
     bitflyerPrivateApi.Order("BTC","USDT",models.Bid,10000.0,1)
 }

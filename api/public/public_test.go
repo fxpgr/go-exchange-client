@@ -36,15 +36,15 @@ func (rt *FakeRoundTripper) Reset() {
 }
 
 func TestNewExchangePublicRepository(t *testing.T) {
-	_, err := NewExchangePublicRepository("bitflyer")
+	_, err := NewClient("bitflyer")
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewExchangePublicRepository("poloniex")
+	_, err = NewClient("poloniex")
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewExchangePublicRepository("hitbtc")
+	_, err = NewClient("hitbtc")
 	if err != nil {
 		panic(err)
 	}
