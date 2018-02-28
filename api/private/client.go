@@ -1,9 +1,9 @@
 package private
 
 import (
-	"strings"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 //go:generate mockery -name=PrivateClient
@@ -31,4 +31,3 @@ func NewClient(exchangeName string, apikey string, seckey string) (PrivateClient
 	}
 	return nil, errors.New("failed to init exchange api")
 }
-

@@ -1,13 +1,13 @@
 package private
 
 import (
-	"strings"
+	"github.com/fxpgr/go-ccex-api-client/models"
 	"io/ioutil"
 	"net/http"
-	"testing"
+	"strings"
 	"sync"
+	"testing"
 	"time"
-	"github.com/fxpgr/go-ccex-api-client/models"
 )
 
 type FakeRoundTripper struct {
@@ -35,23 +35,22 @@ func (rt *FakeRoundTripper) Reset() {
 	rt.requests = nil
 }
 
-
 func TestNewClient(t *testing.T) {
-	_, err := NewClient("bitflyer","APIKEY","SECRETKEY")
+	_, err := NewClient("bitflyer", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient("poloniex","APIKEY","SECRETKEY")
+	_, err = NewClient("poloniex", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
-	}/*
-	_, err = NewClient("hitbtc","APIKEY","SECRETKEY")
-	if err != nil {
-		panic(err)
-	}*/
+	} /*
+		_, err = NewClient("hitbtc","APIKEY","SECRETKEY")
+		if err != nil {
+			panic(err)
+		}*/
 }
 
-func newTestPrivateClient(exchangeName string,rt http.RoundTripper) PrivateClient {
+func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClient {
 	endpoint := "http://localhost:4243"
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
@@ -83,7 +82,7 @@ func TestBitflyerFee(t *testing.T) {
 	json := `{
   "commission_rate": 0.001
 }`
-	client := newTestPrivateClient("bitflyer",&FakeRoundTripper{message: json, status: http.StatusOK})
+	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
 	fee, err := client.PurchaseFeeRate()
 	if err != nil {
 		panic(err)
@@ -98,7 +97,7 @@ func TestBitflyerFee(t *testing.T) {
 	if fee != 0.001 {
 		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", 0.001, fee)
 	}
-	_,err=client.TransferFee()
+	_, err = client.TransferFee()
 	if err != nil {
 		panic(err)
 	}
@@ -123,7 +122,7 @@ func TestBitflyerBalances(t *testing.T) {
     "available": 16.38
   }
 ]`
-	client := newTestPrivateClient("bitflyer",&FakeRoundTripper{message: json, status: http.StatusOK})
+	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
 	balances, err := client.Balances()
 	if err != nil {
 		panic(err)
@@ -162,7 +161,7 @@ func TestBitflyerOrders(t *testing.T) {
     "executed_size": 0.1,
     "total_commission": 0
   }]`
-	client := newTestPrivateClient("bitflyer",&FakeRoundTripper{message: json, status: http.StatusOK})
+	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
 	orders, err := client.ActiveOrders()
 	if err != nil {
 		panic(err)
@@ -181,34 +180,33 @@ func TestBitflyerOrders(t *testing.T) {
 	}
 }
 
-
 func TestBitflyerOrder(t *testing.T) {
 	t.Parallel()
 	json := `{
     "child_order_acceptance_id": "JRF20150707-050237-639234"
 }`
-	client := newTestPrivateClient("bitflyer",&FakeRoundTripper{message: json, status: http.StatusOK})
-	orderId, err := client.Order("BTC","JPY",models.Bid,1000000,0.01)
+	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
+	orderId, err := client.Order("BTC", "JPY", models.Bid, 1000000, 0.01)
 	if err != nil {
 		panic(err)
 	}
 	if orderId != "JRF20150707-050237-639234" {
 		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", "JRF20150707-050237-639234", orderId)
 	}
-	err = client.CancelOrder(orderId,"BTC_JPY")
+	err = client.CancelOrder(orderId, "BTC_JPY")
 	if err != nil {
 		t.Error(err)
 	}
 }
 
-func TestBitflyerOthers(t *testing.T){
+func TestBitflyerOthers(t *testing.T) {
 	t.Parallel()
 	json := ``
-	client := newTestPrivateClient("bitflyer",&FakeRoundTripper{message: json, status: http.StatusOK})
-	if client.Transfer("","",0.1,0.001) == nil {
+	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
+	if client.Transfer("", "", 0.1, 0.001) == nil {
 		t.Errorf("transfer should not be implemented")
 	}
-	if _,err := client.Address(""); err == nil {
+	if _, err := client.Address(""); err == nil {
 		t.Errorf("address should not be implemented")
 	}
 }

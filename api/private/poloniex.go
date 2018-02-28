@@ -26,7 +26,6 @@ const (
 	POLONIEX_BASE_URL = "https://poloniex.com"
 )
 
-
 func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 	return &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
@@ -38,7 +37,7 @@ func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
 		m: new(sync.Mutex),
-	},nil
+	}, nil
 }
 
 func parseCurrencyPair(s string) (string, string, error) {
@@ -51,11 +50,11 @@ func parseCurrencyPair(s string) (string, string, error) {
 }
 
 type PoloniexApi struct {
-	ApiKey    string
-	SecretKey string
-	BaseURL   string
+	ApiKey            string
+	SecretKey         string
+	BaseURL           string
 	RateCacheDuration time.Duration
-	HttpClient http.Client
+	HttpClient        http.Client
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64

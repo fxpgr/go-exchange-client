@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jeffail/gabs"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
-	"github.com/Jeffail/gabs"
 )
 
 const (
@@ -101,7 +101,7 @@ func (b *BitflyerApi) privateApi(method string, path string, args map[string]str
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return []byte{},errors.Wrapf(err, "failed to fetch %s", path)
+		return []byte{}, errors.Wrapf(err, "failed to fetch %s", path)
 	}
 	return byteArray, nil
 }
@@ -109,7 +109,7 @@ func (b *BitflyerApi) privateApi(method string, path string, args map[string]str
 func (b *BitflyerApi) PurchaseFeeRate() (float64, error) {
 	purchaseFeeurl := "/v1/me/gettradingcommission?product_code=BTC_JPY"
 	method := "GET"
-	resBody, err := b.privateApi(method,purchaseFeeurl, map[string]string{})
+	resBody, err := b.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
 		return 1, err
 	}
@@ -138,7 +138,7 @@ func (b *BitflyerApi) Balances() (map[string]float64, error) {
 
 	method := "GET"
 
-	resBody, err := b.privateApi( method,balancepath, map[string]string{})
+	resBody, err := b.privateApi(method, balancepath, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	balancepath := "/v1/me/getbalance"
 	method := "GET"
 
-	resBody, err := b.privateApi(method,balancepath,  map[string]string{})
+	resBody, err := b.privateApi(method, balancepath, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (b *BitflyerApi) ActiveOrders3() ([]*models.Order, error) {
 	method := "GET"
 	params := make(map[string]string)
 	params["child_order_state"] = "ACTIVE"
-	resBody, err := b.privateApi(method,activeOrderurl,  params)
+	resBody, err := b.privateApi(method, activeOrderurl, params)
 	if err != nil {
 		return nil, err
 	}
@@ -284,17 +284,17 @@ func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	method := "GET"
 	params := make(map[string]string)
 	params["child_order_state"] = "ACTIVE"
-	resBody, err := b.privateApi(method,activeOrderurl,  params)
+	resBody, err := b.privateApi(method, activeOrderurl, params)
 	if err != nil {
 		return nil, err
 	}
 	json, err := gabs.ParseJSON(resBody)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	activeOrderArray, err := json.Children()
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	var activeOrders []*models.Order
 
@@ -319,14 +319,14 @@ func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 		}
 		trading, settlement, err := parseCurrencyPair(productCodeStr)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse currency pair")
+			return nil, errors.Wrapf(err, "failed to parse currency pair")
 		}
-		amount,ok  := v.Path("size").Data().(float64)
-		if !ok{
+		amount, ok := v.Path("size").Data().(float64)
+		if !ok {
 			continue
 		}
 		price, ok := v.Path("price").Data().(float64)
-		if !ok{
+		if !ok {
 			continue
 		}
 		activeOrders = append(activeOrders, &models.Order{
@@ -341,6 +341,7 @@ func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	}
 	return activeOrders, nil
 }
+
 type orderBitflyerRespnose struct {
 	OrderNumber string `json:"child_order_acceptance_id"`
 }
@@ -365,7 +366,7 @@ func (b *BitflyerApi) Order(trading string, settlement string, ordertype models.
 	param["price"] = strconv.FormatFloat(price, 'f', 8, 64)
 	param["size"] = strconv.FormatFloat(amount, 'f', 8, 64)
 
-	bs, err := b.privateApi(method,orderpath,  param)
+	bs, err := b.privateApi(method, orderpath, param)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
