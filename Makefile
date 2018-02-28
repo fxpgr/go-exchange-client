@@ -38,4 +38,9 @@ test-short:	testdeps gotest
 
 test-ci: pretest
 	go test -race $$(go list ./... | grep -v vendor) -cover -coverprofile=.coverprofile .
-	goveralls -coverprofile=.coverprofile -repotoken ${CI_TOKEN}
+	goveralls -coverprofile=.coverprofile -repotoken ${CI_TOKEN} -coverprofile=.profile.cov
+
+test-travis: pretest
+	sh scripts/coverall.sh
+	goveralls -coverprofile=.coverprofile -repotoken ${CI_TOKEN} -coverprofile=.profile.cov
+

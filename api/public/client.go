@@ -3,7 +3,6 @@ package public
 import (
 	"errors"
 	"github.com/fxpgr/go-ccex-api-client/models"
-	"go.uber.org/zap"
 	"strings"
 	"sync"
 )
