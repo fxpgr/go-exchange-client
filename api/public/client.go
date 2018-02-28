@@ -1,9 +1,9 @@
 package public
 
 import (
-	"strings"
-	"github.com/fxpgr/go-ccex-api-client/models"
 	"errors"
+	"github.com/fxpgr/go-ccex-api-client/models"
+	"strings"
 )
 
 //go:generate mockery -name=ExchangePublicRepository

@@ -28,9 +28,9 @@ type BitflyerApiConfig struct {
 }
 
 type BitflyerApi struct {
-	Apikey    string
-	ApiSecret string
-	BaseURL   string
+	Apikey            string
+	ApiSecret         string
+	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
 
@@ -43,13 +43,13 @@ type BitflyerApi struct {
 
 func NewBitflyerPrivateApi(apikey string, apisecret string) (*BitflyerApi, error) {
 	api := &BitflyerApi{
-		Apikey:apikey,
-		ApiSecret:apisecret,
+		Apikey:            apikey,
+		ApiSecret:         apisecret,
 		BaseURL:           BITFLYER_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
 		m: new(sync.Mutex),
 	}

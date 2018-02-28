@@ -26,9 +26,9 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 	api := &HitbtcApi{
 		BaseURL:           HITBTC_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
 		m: new(sync.Mutex),
 	}
@@ -38,9 +38,9 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 type HitbtcApi struct {
 	BaseURL           string
 	RateCacheDuration time.Duration
-	volumeMap       map[string]map[string]float64
-	rateMap         map[string]map[string]float64
-	rateLastUpdated time.Time
+	volumeMap         map[string]map[string]float64
+	rateMap           map[string]map[string]float64
+	rateLastUpdated   time.Time
 	HttpClient        http.Client
 
 	settlements []string
