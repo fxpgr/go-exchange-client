@@ -255,11 +255,11 @@ func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	if err != nil {
 		return nil, err
 	}
-	activeOrderValue, err := jason.NewValueFromBytes(resBody)
+	activeOrderValue, err := jason.NewObjectFromBytes(resBody)
 	if err != nil {
 		return nil, err
 	}
-	activeOrderArray, err := activeOrderValue.ObjectArray()
+	activeOrderArray, err := activeOrderValue.GetObjectArray()
 	if err != nil {
 		return nil, err
 	}
