@@ -18,42 +18,16 @@ const (
 	POLONIEX_BASE_URL = "https://poloniex.com"
 )
 
-type PoloniexApiConfig struct {
-	BaseURL           string
-	RateCacheDuration time.Duration
-}
-
 func NewPoloniexPublicApi() (*PoloniexApi, error) {
-	conf := &PoloniexApiConfig{
+	api := &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-	}
-
-	api := &PoloniexApi{
 		rateMap:         nil,
 		volumeMap:       nil,
 		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		HttpClient:        http.Client{},
 
 		m: new(sync.Mutex),
-		c: conf,
-	}
-	return api, nil
-}
-
-func NewPoloniexApiUsingConfigFunc(f func(*PoloniexApiConfig)) (*PoloniexApi, error) {
-	conf := &PoloniexApiConfig{
-		BaseURL:           POLONIEX_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-	}
-	f(conf)
-
-	api := &PoloniexApi{
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-
-		m: new(sync.Mutex),
-		c: conf,
 	}
 	return api, nil
 }
@@ -69,23 +43,26 @@ func parsePoloCurrencyPair(s string) (string, string, error) {
 }
 
 type PoloniexApi struct {
+	BaseURL string
+	RateCacheDuration time.Duration
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
+	HttpClient        http.Client
 
 	m *sync.Mutex
-	c *PoloniexApiConfig
 }
 
 func (p *PoloniexApi) publicApiUrl(command string) string {
-	return p.c.BaseURL + "/public?command=" + command
+	return p.BaseURL + "/public?command=" + command
 }
 
 func (p *PoloniexApi) fetchRate() error {
 	p.rateMap = make(map[string]map[string]float64)
 	p.volumeMap = make(map[string]map[string]float64)
 	url := p.publicApiUrl("returnTicker")
-	resp, err := http.Get(url)
+
+	resp, err := p.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -153,7 +130,7 @@ func (p *PoloniexApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
 	defer p.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(p.rateLastUpdated) >= p.c.RateCacheDuration {
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
 		err := p.fetchRate()
 		if err != nil {
 			return nil, err
@@ -180,7 +157,7 @@ func (p *PoloniexApi) Volume(trading string, settlement string) (float64, error)
 	defer p.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(p.rateLastUpdated) >= p.c.RateCacheDuration {
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
 		err := p.fetchRate()
 		if err != nil {
 			return 0, err
@@ -206,7 +183,7 @@ func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {
 	}
 
 	now := time.Now()
-	if now.Sub(p.rateLastUpdated) >= p.c.RateCacheDuration {
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
 		err := p.fetchRate()
 		if err != nil {
 			return 0, err
@@ -236,7 +213,7 @@ type Currency struct {
 func (p *PoloniexApi) Currencies() (map[string]Currency, error) {
 	url := p.publicApiUrl("returnCurrencies")
 
-	resp, err := http.Get(url)
+	resp, err := p.HttpClient.Get(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}

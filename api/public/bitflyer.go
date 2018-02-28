@@ -25,22 +25,9 @@ func NewBitflyerPublicApi() (*BitflyerApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		HttpClient:        http.Client{},
 
 		m: new(sync.Mutex),
-	}
-	api.fetchSettlements()
-	return api, nil
-}
-
-func NewTestBitflyerPublicApi(baseUrl string, httpClient http.Client) (*BitflyerApi, error) {
-	api := &BitflyerApi{
-		BaseURL:           baseUrl,
-		RateCacheDuration: 30 * time.Second,
-		HttpClient:        httpClient,
-		rateMap:           nil,
-		volumeMap:         nil,
-		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		m:                 new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil

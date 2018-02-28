@@ -19,49 +19,29 @@ const (
 )
 
 type HitbtcApiConfig struct {
-	BaseURL           string
-	RateCacheDuration time.Duration
 }
 
 func NewHitbtcPublicApi() (*HitbtcApi, error) {
-	conf := &HitbtcApiConfig{
-		BaseURL:           HITBTC_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-	}
 
 	api := &HitbtcApi{
+		BaseURL:           HITBTC_BASE_URL,
+		RateCacheDuration: 30 * time.Second,
 		rateMap:         nil,
 		volumeMap:       nil,
 		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
 		m: new(sync.Mutex),
-		c: conf,
-	}
-	return api, nil
-}
-
-func NewHitbtcApiUsingConfigFunc(f func(*HitbtcApiConfig)) (*HitbtcApi, error) {
-	conf := &HitbtcApiConfig{
-		BaseURL:           HITBTC_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-	}
-	f(conf)
-
-	api := &HitbtcApi{
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-
-		m: new(sync.Mutex),
-		c: conf,
 	}
 	return api, nil
 }
 
 type HitbtcApi struct {
+	BaseURL           string
+	RateCacheDuration time.Duration
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
+	HttpClient        http.Client
 
 	settlements []string
 
@@ -70,13 +50,13 @@ type HitbtcApi struct {
 }
 
 func (h *HitbtcApi) publicApiUrl(command string) string {
-	return h.c.BaseURL + "/public/" + command
+	return h.BaseURL + "/public/" + command
 }
 
 func (h *HitbtcApi) fetchSettlements() error {
 	settlements := make([]string, 0)
 	url := h.publicApiUrl("symbol")
-	resp, err := http.Get(url)
+	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -120,7 +100,7 @@ func (h *HitbtcApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
 	url := h.publicApiUrl("ticker")
-	resp, err := http.Get(url)
+	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -203,7 +183,7 @@ func (h *HitbtcApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
 	defer h.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(h.rateLastUpdated) >= h.c.RateCacheDuration {
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
 		err := h.fetchRate()
 		if err != nil {
 			return nil, err
@@ -230,13 +210,14 @@ func (h *HitbtcApi) Volume(trading string, settlement string) (float64, error) {
 	defer h.m.Unlock()
 
 	now := time.Now()
-	if now.Sub(h.rateLastUpdated) >= h.c.RateCacheDuration {
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
 		err := h.fetchRate()
 		if err != nil {
 			return 0, err
 		}
 		h.rateLastUpdated = now
 	}
+	fmt.Println(h.rateMap)
 	if m, ok := h.volumeMap[trading]; !ok {
 		return 0, errors.Errorf("%s/%s", trading, settlement)
 	} else if volume, ok := m[settlement]; !ok {
@@ -255,7 +236,7 @@ func (h *HitbtcApi) Rate(trading string, settlement string) (float64, error) {
 	}
 
 	now := time.Now()
-	if now.Sub(h.rateLastUpdated) >= h.c.RateCacheDuration {
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
 		err := h.fetchRate()
 		if err != nil {
 			return 0, err
