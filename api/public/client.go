@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-//go:generate mockery -name=ExchangePublicRepository
-type ExchangePublicRepository interface {
+//go:generate mockery -name=PublicClient
+type PublicClient interface {
 	Volume(trading string, settlement string) (float64, error)
 	CurrencyPairs() ([]*models.CurrencyPair, error)
 	Rate(trading string, settlement string) (float64, error)
 }
 
-func NewClient(exchangeName string) (ExchangePublicRepository, error) {
+func NewClient(exchangeName string) (PublicClient, error) {
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
 		return NewBitflyerPublicApi()

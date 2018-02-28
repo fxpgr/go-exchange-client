@@ -35,7 +35,7 @@ func (rt *FakeRoundTripper) Reset() {
 	rt.requests = nil
 }
 
-func TestNewExchangePublicRepository(t *testing.T) {
+func TestNewClient(t *testing.T) {
 	_, err := NewClient("bitflyer")
 	if err != nil {
 		panic(err)
@@ -50,7 +50,7 @@ func TestNewExchangePublicRepository(t *testing.T) {
 	}
 }
 
-func newTestPoloniexPublicClient(rt http.RoundTripper) ExchangePublicRepository {
+func newTestPoloniexPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	api := &PoloniexApi{
 		BaseURL:           endpoint,
@@ -63,7 +63,7 @@ func newTestPoloniexPublicClient(rt http.RoundTripper) ExchangePublicRepository 
 	}
 	return api
 }
-func newTestHitbtcPublicClient(rt http.RoundTripper) ExchangePublicRepository {
+func newTestHitbtcPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	api := &HitbtcApi{
 		BaseURL:           endpoint,
@@ -78,7 +78,7 @@ func newTestHitbtcPublicClient(rt http.RoundTripper) ExchangePublicRepository {
 	return api
 }
 
-func newTestBitflyerPublicClient(rt http.RoundTripper) ExchangePublicRepository {
+func newTestBitflyerPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	api := &BitflyerApi{
 		BaseURL:           endpoint,
