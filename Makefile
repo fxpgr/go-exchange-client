@@ -35,4 +35,4 @@ gotest:
 test: pretest gotest
 
 test-ci: pretest
-    goveralls -repotoken ${CI_TOKEN}
+	goveralls -repotoken ${CI_TOKEN}
