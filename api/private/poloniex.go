@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -40,14 +39,6 @@ func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 	}, nil
 }
 
-func parseCurrencyPair(s string) (string, string, error) {
-	xs := strings.Split(s, "_")
-
-	if len(xs) != 2 {
-		return "", "", errors.New("invalid ticker title")
-	}
-	return xs[0], xs[1], nil
-}
 
 type PoloniexApi struct {
 	ApiKey            string
@@ -67,9 +58,6 @@ func (p *PoloniexApi) privateApiUrl() string {
 	return p.BaseURL
 }
 
-type errorResponse struct {
-	Error *string `json:"error"`
-}
 
 func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte, error) {
 	cli := &http.Client{}
@@ -234,14 +222,6 @@ func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
-type openOrder struct {
-	OrderNumber string `json:"orderNumber"`
-	Type        string `json:"type"`
-	Rate        string `json:"rate"`
-	Amount      string `json:"amount"`
-	Total       string `json:"total"`
-}
-
 func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 	bs, err := p.privateApi("returnOpenOrders", map[string]string{
 		"currencyPair": "all",
@@ -306,9 +286,6 @@ func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 	return orders, nil
 }
 
-type orderRespnose struct {
-	OrderNumber string `json:"orderNumber,string"`
-}
 
 func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
 	var cmd string
@@ -347,9 +324,6 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 	return res.OrderNumber, nil
 }
 
-type transferResponse struct {
-	Response string `json:"response"`
-}
 
 func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
 	args := make(map[string]string)
@@ -371,10 +345,6 @@ func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, addition
 	}
 
 	return nil
-}
-
-type cancelOrderResponse struct {
-	Success int `json:"success"`
 }
 
 func (p *PoloniexApi) CancelOrder(orderNumber string, _ string) error {
