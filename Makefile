@@ -8,6 +8,8 @@
 	gotest \
 	test \
 
+CI_TOKEN = foo
+
 lint:
 	@ go get -v github.com/golang/lint/golint
 	[ -z "$$(golint . | grep -v 'type name will be used as docker.DockerInfo' | grep -v 'context.Context should be the first' | tee /dev/stderr)" ]
@@ -31,3 +33,7 @@ gotest:
 	go test -race $$(go list ./... | grep -v vendor) -cover
 
 test: pretest gotest
+
+test-ci:
+    pretest
+    goveralls -repotoken ${CI_TOKEN}
