@@ -1,4 +1,4 @@
-# go-ccex-api-client
+# Go-ccex-api-Client - a Client for  Bitcoin exchanges
 
 [![GoDoc](https://img.shields.io/badge/api-Godoc-blue.svg?style=flat-square)](https://godoc.org/github.com/airking05/go-ccex-api-client)
 [![Build Status](https://travis-ci.org/fxpgr/go-ccex-api-client.svg?branch=master&time=now)](https://travis-ci.org/fxpgr/go-ccex-api-client)

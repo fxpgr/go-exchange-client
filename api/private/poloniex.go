@@ -26,37 +26,19 @@ const (
 	POLONIEX_BASE_URL = "https://poloniex.com"
 )
 
-type PoloniexApiConfig struct {
-	Apikey    string
-	ApiSecret string
-	BaseURL   string
-
-	RateCacheDuration time.Duration
-}
-
-func NewPoloniexApiUsingConfigFunc(f func(*PoloniexApiConfig)) (*PoloniexApi, error) {
-	conf := &PoloniexApiConfig{
-		BaseURL:           POLONIEX_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-	}
-	f(conf)
-
-	api := &PoloniexApi{
-		rateMap:         nil,
-		volumeMap:       nil,
-		rateLastUpdated: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-
-		m: new(sync.Mutex),
-		c: conf,
-	}
-	return api, nil
-}
 
 func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
-	return NewPoloniexApiUsingConfigFunc(func(c *PoloniexApiConfig) {
-		c.Apikey = apikey
-		c.ApiSecret = apisecret
-	})
+	return &PoloniexApi{
+		BaseURL:           POLONIEX_BASE_URL,
+		RateCacheDuration: 30 * time.Second,
+		ApiKey:            apikey,
+		SecretKey:         apisecret,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+
+		m: new(sync.Mutex),
+	},nil
 }
 
 func parseCurrencyPair(s string) (string, string, error) {
@@ -69,16 +51,21 @@ func parseCurrencyPair(s string) (string, string, error) {
 }
 
 type PoloniexApi struct {
+	ApiKey    string
+	SecretKey string
+	BaseURL   string
+	RateCacheDuration time.Duration
+	HttpClient http.Client
+
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
 
 	m *sync.Mutex
-	c *PoloniexApiConfig
 }
 
 func (p *PoloniexApi) privateApiUrl() string {
-	return p.c.BaseURL
+	return p.BaseURL
 }
 
 type errorResponse struct {
@@ -103,7 +90,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 		return nil, errors.Wrapf(err, "failed to create request command %s", command)
 	}
 
-	mac := hmac.New(sha512.New, []byte(p.c.ApiSecret))
+	mac := hmac.New(sha512.New, []byte(p.SecretKey))
 	_, err = mac.Write([]byte(val.Encode()))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encrypt request")
@@ -111,7 +98,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	sign := mac.Sum(nil)
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Key", p.c.Apikey)
+	req.Header.Add("Key", p.ApiKey)
 	req.Header.Add("Sign", hex.EncodeToString(sign))
 
 	res, err := cli.Do(req)

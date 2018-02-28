@@ -14,10 +14,9 @@ import (
 	"time"
 
 	"github.com/antonholmquist/jason"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"github.com/Jeffail/gabs"
 )
 
 const (
@@ -56,25 +55,11 @@ func NewBitflyerPrivateApi(apikey string, apisecret string) (*BitflyerApi, error
 	return api, nil
 }
 
-func NewTestBitflyerPrivateApi(baseUrl string, httpClient http.Client) (*BitflyerApi, error) {
-	api := &BitflyerApi{
-		BaseURL:           baseUrl,
-		RateCacheDuration: 30 * time.Second,
-		HttpClient:        httpClient,
-		rateMap:           nil,
-		volumeMap:         nil,
-		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		m:                 new(sync.Mutex),
-	}
-	return api, nil
-}
-
 func (b *BitflyerApi) privateApiUrl() string {
 	return b.BaseURL
 }
 
 func (b *BitflyerApi) privateApi(method string, path string, args map[string]string) ([]byte, error) {
-	cli := &http.Client{}
 	var err error
 
 	val := url.Values{}
@@ -108,35 +93,23 @@ func (b *BitflyerApi) privateApi(method string, path string, args map[string]str
 	req.Header.Add("ACCESS-KEY", b.Apikey)
 	req.Header.Add("ACCESS-SIGN", hex.EncodeToString(sign))
 
-	res, err := cli.Do(req)
+	resp, err := b.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request command %s", path)
 	}
-	defer res.Body.Close()
+	defer resp.Body.Close()
 
-	resBody, err := ioutil.ReadAll(res.Body)
+	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch result of command %s", path)
+		return []byte{},errors.Wrapf(err, "failed to fetch %s", path)
 	}
-
-	logger.Get().Infof("[bitflyer] private api called: cmd=%s req=%s, res=%.60s", path, spew.Sdump(args), string(resBody))
-
-	var errres errorResponse
-	err = json.Unmarshal(resBody, &errres)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse response")
-	}
-	if errres.Error != nil {
-		return nil, errors.Errorf("server returns error '%s'", *errres.Error)
-	}
-
-	return resBody, nil
+	return byteArray, nil
 }
 
 func (b *BitflyerApi) PurchaseFeeRate() (float64, error) {
 	purchaseFeeurl := "/v1/me/gettradingcommission?product_code=BTC_JPY"
 	method := "GET"
-	resBody, err := b.privateApi(purchaseFeeurl, method, map[string]string{})
+	resBody, err := b.privateApi(method,purchaseFeeurl, map[string]string{})
 	if err != nil {
 		return 1, err
 	}
@@ -165,7 +138,7 @@ func (b *BitflyerApi) Balances() (map[string]float64, error) {
 
 	method := "GET"
 
-	resBody, err := b.privateApi(balancepath, method, map[string]string{})
+	resBody, err := b.privateApi( method,balancepath, map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +178,7 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	balancepath := "/v1/me/getbalance"
 	method := "GET"
 
-	resBody, err := b.privateApi(balancepath, method, map[string]string{})
+	resBody, err := b.privateApi(method,balancepath,  map[string]string{})
 	if err != nil {
 		return nil, err
 	}
@@ -246,12 +219,12 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return completebalancemap, nil
 }
 
-func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
+func (b *BitflyerApi) ActiveOrders3() ([]*models.Order, error) {
 	activeOrderurl := "/v1/me/getchildorders?child_order_state=ACTIVE&product_code=BTC_JPY"
 	method := "GET"
 	params := make(map[string]string)
 	params["child_order_state"] = "ACTIVE"
-	resBody, err := b.privateApi(activeOrderurl, method, params)
+	resBody, err := b.privateApi(method,activeOrderurl,  params)
 	if err != nil {
 		return nil, err
 	}
@@ -306,8 +279,70 @@ func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	return activeOrders, nil
 }
 
+func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
+	activeOrderurl := "/v1/me/getchildorders?child_order_state=ACTIVE&product_code=BTC_JPY"
+	method := "GET"
+	params := make(map[string]string)
+	params["child_order_state"] = "ACTIVE"
+	resBody, err := b.privateApi(method,activeOrderurl,  params)
+	if err != nil {
+		return nil, err
+	}
+	json, err := gabs.ParseJSON(resBody)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	activeOrderArray, err := json.Children()
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	var activeOrders []*models.Order
+
+	for _, v := range activeOrderArray {
+		exchangeOrderId, ok := v.Path("child_order_acceptance_id").Data().(string)
+		if !ok {
+			continue
+		}
+		var orderType models.OrderType
+		orderTypeStr, ok := v.Path("side").Data().(string)
+		if !ok {
+			continue
+		}
+		if orderTypeStr == "BUY" {
+			orderType = models.Ask
+		} else if orderTypeStr == "SELL" {
+			orderType = models.Bid
+		}
+		productCodeStr, ok := v.Path("product_code").Data().(string)
+		if !ok {
+			continue
+		}
+		trading, settlement, err := parseCurrencyPair(productCodeStr)
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse currency pair")
+		}
+		amount,ok  := v.Path("size").Data().(float64)
+		if !ok{
+			continue
+		}
+		price, ok := v.Path("price").Data().(float64)
+		if !ok{
+			continue
+		}
+		activeOrders = append(activeOrders, &models.Order{
+			ExchangeOrderID: exchangeOrderId,
+			Type:            orderType,
+			Trading:         trading,
+			Settlement:      settlement,
+			Price:           price,
+			Amount:          amount,
+		})
+
+	}
+	return activeOrders, nil
+}
 type orderBitflyerRespnose struct {
-	OrderNumber string `json:"child_order_acceptance_id,string"`
+	OrderNumber string `json:"child_order_acceptance_id"`
 }
 
 func (b *BitflyerApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
@@ -327,11 +362,10 @@ func (b *BitflyerApi) Order(trading string, settlement string, ordertype models.
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
 	param["side"] = cmd
-
 	param["price"] = strconv.FormatFloat(price, 'f', 8, 64)
 	param["size"] = strconv.FormatFloat(amount, 'f', 8, 64)
 
-	bs, err := b.privateApi(orderpath, method, param)
+	bs, err := b.privateApi(method,orderpath,  param)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
