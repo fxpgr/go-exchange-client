@@ -22,12 +22,12 @@ import (
 )
 
 const (
-	POLONIEX_BASE_URL = "https://poloniex.com"
+	HITBTC_BASE_URL = "https://poloniex.com"
 )
 
-func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
-	return &PoloniexApi{
-		BaseURL:           POLONIEX_BASE_URL,
+func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
+	return &HitbtcApi{
+		BaseURL:           HITBTC_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
@@ -39,7 +39,7 @@ func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 	}, nil
 }
 
-type PoloniexApi struct {
+type HitbtcApi struct {
 	ApiKey            string
 	SecretKey         string
 	BaseURL           string
@@ -53,11 +53,11 @@ type PoloniexApi struct {
 	m *sync.Mutex
 }
 
-func (p *PoloniexApi) privateApiUrl() string {
-	return p.BaseURL
+func (h *HitbtcApi) privateApiUrl() string {
+	return h.BaseURL
 }
 
-func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte, error) {
+func (h *HitbtcApi) privateApi(command string, args map[string]string) ([]byte, error) {
 	cli := &http.Client{}
 
 	val := url.Values{}
@@ -70,12 +70,12 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	}
 
 	reader := bytes.NewReader([]byte(val.Encode()))
-	req, err := http.NewRequest("POST", p.privateApiUrl(), reader)
+	req, err := http.NewRequest("POST", h.privateApiUrl(), reader)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", command)
 	}
 
-	mac := hmac.New(sha512.New, []byte(p.SecretKey))
+	mac := hmac.New(sha512.New, []byte(h.SecretKey))
 	_, err = mac.Write([]byte(val.Encode()))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encrypt request")
@@ -83,7 +83,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	sign := mac.Sum(nil)
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Key", p.ApiKey)
+	req.Header.Add("Key", h.ApiKey)
 	req.Header.Add("Sign", hex.EncodeToString(sign))
 
 	res, err := cli.Do(req)
@@ -111,15 +111,10 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	return resBody, nil
 }
 
-type poloniexFeeRate struct {
-	MakerFee float64 `json:"makerFee"`
-	TakerFee float64 `json:"takerFee"`
-}
-
-func (p *PoloniexApi) fetchFeeRate() (float64, error) {
+func (h *HitbtcApi) fetchFeeRate() (float64, error) {
 	var fee poloniexFeeRate
 
-	bs, err := p.privateApi("returnFeeInfo", nil)
+	bs, err := h.privateApi("returnFeeInfo", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -132,20 +127,20 @@ func (p *PoloniexApi) fetchFeeRate() (float64, error) {
 	return fee.TakerFee, nil
 }
 
-func (p *PoloniexApi) PurchaseFeeRate() (float64, error) {
-	return p.fetchFeeRate()
+func (h *HitbtcApi) PurchaseFeeRate() (float64, error) {
+	return h.fetchFeeRate()
 }
 
-func (p *PoloniexApi) SellFeeRate() (float64, error) {
-	return p.fetchFeeRate()
+func (h *HitbtcApi) SellFeeRate() (float64, error) {
+	return h.fetchFeeRate()
 }
 
-func (p *PoloniexApi) TransferFee() (map[string]float64, error) {
+func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	return nil, nil
 }
 
-func (p *PoloniexApi) Balances() (map[string]float64, error) {
-	bs, err := p.privateApi("returnBalances", nil)
+func (h *HitbtcApi) Balances() (map[string]float64, error) {
+	bs, err := h.privateApi("returnBalances", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -175,8 +170,8 @@ func (p *PoloniexApi) Balances() (map[string]float64, error) {
 	return m, nil
 }
 
-func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
-	bs, err := p.privateApi("returnCompleteBalances", nil)
+func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
+	bs, err := h.privateApi("returnCompleteBalances", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -220,8 +215,8 @@ func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
-func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
-	bs, err := p.privateApi("returnOpenOrders", map[string]string{
+func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
+	bs, err := h.privateApi("returnOpenOrders", map[string]string{
 		"currencyPair": "all",
 	})
 	if err != nil {
@@ -284,7 +279,7 @@ func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 	return orders, nil
 }
 
-func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
+func (h *HitbtcApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
 	var cmd string
 	if ordertype == models.Ask {
 		cmd = "buy"
@@ -301,7 +296,7 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 	args["rate"] = strconv.FormatFloat(price, 'g', -1, 64)
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
 
-	bs, err := p.privateApi(cmd, args)
+	bs, err := h.privateApi(cmd, args)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
@@ -321,13 +316,13 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 	return res.OrderNumber, nil
 }
 
-func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
+func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
 	args := make(map[string]string)
 	args["address"] = addr
 	args["currency"] = typ
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
 
-	bs, err := p.privateApi("withdraw", args)
+	bs, err := h.privateApi("withdraw", args)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer deposit")
 	}
@@ -343,11 +338,11 @@ func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, addition
 	return nil
 }
 
-func (p *PoloniexApi) CancelOrder(orderNumber string, _ string) error {
+func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 	args := make(map[string]string)
 	args["orderNumber"] = orderNumber
 
-	bs, err := p.privateApi("cancelOrder", args)
+	bs, err := h.privateApi("cancelOrder", args)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
 	}
@@ -364,8 +359,8 @@ func (p *PoloniexApi) CancelOrder(orderNumber string, _ string) error {
 	return nil
 }
 
-func (p *PoloniexApi) Address(c string) (string, error) {
-	bs, err := p.privateApi("returnDepositAddresses", nil)
+func (h *HitbtcApi) Address(c string) (string, error) {
+	bs, err := h.privateApi("returnDepositAddresses", nil)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch deposit address")
 	}
