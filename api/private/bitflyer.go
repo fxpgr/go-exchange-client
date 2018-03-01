@@ -219,66 +219,6 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return completebalancemap, nil
 }
 
-func (b *BitflyerApi) ActiveOrders3() ([]*models.Order, error) {
-	activeOrderurl := "/v1/me/getchildorders?child_order_state=ACTIVE&product_code=BTC_JPY"
-	method := "GET"
-	params := make(map[string]string)
-	params["child_order_state"] = "ACTIVE"
-	resBody, err := b.privateApi(method, activeOrderurl, params)
-	if err != nil {
-		return nil, err
-	}
-	activeOrderValue, err := jason.NewObjectFromBytes(resBody)
-	if err != nil {
-		return nil, err
-	}
-	activeOrderArray, err := activeOrderValue.GetObjectArray()
-	if err != nil {
-		return nil, err
-	}
-	var activeOrders []*models.Order
-
-	for _, v := range activeOrderArray {
-		exchangeOrderId, err := v.GetString("id")
-		if err != nil {
-			continue
-		}
-		var orderType models.OrderType
-		orderTypeStr, err := v.GetString("side")
-		if err != nil {
-			continue
-		}
-		if orderTypeStr == "BUY" {
-			orderType = models.Ask
-		} else if orderTypeStr == "SELL" {
-			orderType = models.Bid
-		}
-		productCodeStr, err := v.GetString("product_code")
-		if err != nil {
-			continue
-		}
-		trading, settlement, err := parseCurrencyPair(productCodeStr)
-		amount, err := v.GetFloat64("size")
-		if err != nil {
-			continue
-		}
-		price, err := v.GetFloat64("price")
-		if err != nil {
-			continue
-		}
-		activeOrders = append(activeOrders, &models.Order{
-			ExchangeOrderID: exchangeOrderId,
-			Type:            orderType,
-			Trading:         trading,
-			Settlement:      settlement,
-			Price:           price,
-			Amount:          amount,
-		})
-
-	}
-	return activeOrders, nil
-}
-
 func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	activeOrderurl := "/v1/me/getchildorders?child_order_state=ACTIVE&product_code=BTC_JPY"
 	method := "GET"
