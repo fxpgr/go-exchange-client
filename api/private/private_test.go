@@ -43,11 +43,11 @@ func TestNewClient(t *testing.T) {
 	_, err = NewClient("poloniex", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
-	} /*
-		_, err = NewClient("hitbtc","APIKEY","SECRETKEY")
-		if err != nil {
-			panic(err)
-		}*/
+	}
+	_, err = NewClient("hitbtc","APIKEY","SECRETKEY")
+	if err != nil {
+		panic(err)
+	}
 }
 
 func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClient {
@@ -65,6 +65,16 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		}
 	case "poloniex":
 		return &PoloniexApi{
+			BaseURL:           endpoint,
+			RateCacheDuration: 30 * time.Second,
+			HttpClient:        http.Client{Transport: rt},
+			rateMap:           nil,
+			volumeMap:         nil,
+			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			m:                 new(sync.Mutex),
+		}
+	case "hitbtc":
+		return &HitbtcApi{
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -312,5 +322,28 @@ func TestPoloniexOthers(t *testing.T) {
 	rt.message = `{"BTC":"19YqztHmspv2egyD6jQM3yn81x5t5krVdJ","LTC":"LPgf9kjv9H1Vuh4XSaKhzBe8JHdou1WgUB"}`
 	if _, err := client.Address("LTC"); err != nil {
 		t.Errorf("address should not be implemented")
+	}
+}
+
+
+func TestHitbtcBalances(t *testing.T) {
+	t.Parallel()
+	json := `[{"currency": "ETH", "available": "10.000000000", "reserved":"0.560000000"},{"currency": "BTC","available":"0.010205869","reserved": "0"}]`
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("hitbtc",rt)
+	balances, err := client.Balances()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balances["ETH"] != 10.000000000 {
+		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", 10.000000000, balances["ETH"])
+	}
+	balanceMap, err := client.CompleteBalances()
+	if err != nil {
+		panic(err)
+	}
+
+	if balanceMap["ETH"].Available != 10 || balanceMap["ETH"].OnOrders != 0.56 {
+		t.Error("BitflyerPrivateApi: balance map error")
 	}
 }

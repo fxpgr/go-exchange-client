@@ -28,6 +28,8 @@ func NewClient(exchangeName string, apikey string, seckey string) (PrivateClient
 		return NewBitflyerPrivateApi(apikey, seckey)
 	case "poloniex":
 		return NewPoloniexApi(apikey, seckey)
+	case "hitbtc":
+		return NewHitbtcApi(apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }

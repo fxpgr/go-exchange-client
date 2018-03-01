@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"github.com/antonholmquist/jason"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/fxpgr/go-ccex-api-client/logger"
+	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"strconv"
+	"fmt"
+	"strings"
+	"github.com/Jeffail/gabs"
 )
 
 const (
@@ -78,18 +81,6 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch result of command %s", path)
 	}
-
-	logger.Get().Infof("[hitbtc] private api called: cmd=%s req=%s, res=%.60s", path, spew.Sdump(args), string(resBody))
-
-	var errres errorResponse
-	err = json.Unmarshal(resBody, &errres)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse response")
-	}
-	if errres.Error != nil {
-		return nil, errors.Errorf("server returns error '%s'", *errres.Error)
-	}
-
 	return resBody, nil
 }
 
@@ -123,143 +114,143 @@ func (h *HitbtcApi) SellFeeRate() (float64, error) {
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	return nil, nil
 }
-/*
+
 func (h *HitbtcApi) Balances() (map[string]float64, error) {
 	bs, err := h.privateApi("GET","/api/2/trading/balance", nil)
 	if err != nil {
 		return nil, err
 	}
-
-	json, err := jason.NewObjectFromBytes(bs)
+	json, err := gabs.ParseJSON(bs)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse json")
+		return nil,errors.Wrapf(err, "failed to parse json")
 	}
-
+	rateMap, err := json.Children()
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
 	m := make(map[string]float64)
-	jsonMap := json.Map()
-	for k, v := range jsonMap {
-		if err != nil {
+	for _, v := range rateMap {
+		currency, ok := v.Path("currency").Data().(string)
+		if !ok {
 			continue
 		}
-		balanceStr, err := v.String()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse %v as string", v)
+		availableStr, ok := v.Path("available").Data().(string)
+		if !ok {
+			continue
 		}
-		balance, err := strconv.ParseFloat(balanceStr, 64)
+		available,err := strconv.ParseFloat(availableStr,10)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse %s as float", balanceStr)
+			return nil,err
 		}
-		m[k] = balance
+		m[currency] = available
 	}
-
 	return m, nil
 }
 
 func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
-	bs, err := h.privateApi("returnCompleteBalances", nil)
+	bs, err := h.privateApi("GET","/api/2/trading/balance", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	json, err := jason.NewObjectFromBytes(bs)
+	json, err := gabs.ParseJSON(bs)
+
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse json")
+		return nil,errors.Wrapf(err, "failed to parse json")
 	}
 
-	m := make(map[string]*models.Balance)
-	jsonMap := json.Map()
-	for k, v := range jsonMap {
-		balanceObj, err := v.Object()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse %v as object", v)
-		}
-		balanceMap := balanceObj.Map()
-
-		availableStr, err := balanceMap["available"].String()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get available as string")
-		}
-		available, err := strconv.ParseFloat(availableStr, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't parse available(%s) as float64", availableStr)
-		}
-
-		onOrdersStr, err := balanceMap["onOrders"].String()
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't get onOrders as string")
-		}
-		onOrders, err := strconv.ParseFloat(onOrdersStr, 64)
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't parse onOrders(%s) as float64", onOrdersStr)
-		}
-
-		b := models.NewBalance(available, onOrders)
-		m[k] = b
+	rateMap, err := json.Children()
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
 	}
-
+	m :=make(map[string]*models.Balance)
+	for _, v := range rateMap {
+		availableStr, ok := v.Path("available").Data().(string)
+		if !ok {
+			continue
+		}
+		available,err := strconv.ParseFloat(availableStr,10)
+		if err != nil {
+			return nil,err
+		}
+		reservedStr, ok := v.Path("reserved").Data().(string)
+		if !ok {
+			continue
+		}
+		reserved,err := strconv.ParseFloat(reservedStr,10)
+		if err != nil {
+			return nil,err
+		}
+		currency, ok := v.Path("currency").Data().(string)
+		if !ok {
+			continue
+		}
+		balance := models.NewBalance(available,reserved)
+		m[currency] = balance
+	}
 	return m, nil
 }
 
 func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
-	bs, err := h.privateApi("returnOpenOrders", map[string]string{
-		"currencyPair": "all",
+	bs, err := h.privateApi("GET","/api/2/order", map[string]string{
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	var m map[string][]openOrder
-	if err := json.Unmarshal(bs, &m); err != nil {
+	json ,err := jason.NewObjectFromBytes(bs)
+	if err != nil {
+		return nil, err
+	}
+	m,err:= json.Array()
+	if err != nil {
 		return nil, err
 	}
 
 	var orders []*models.Order
-	for pair, os := range m {
-		if len(os) == 0 {
+	for _, v := range m {
+		order,err := v.Object()
+		if err != nil {
 			continue
 		}
-
+		pair,err := order.GetString()
+		if err != nil {
+			continue
+		}
 		trading, settlement, err := parseCurrencyPair(pair)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot parse currency pair: %s", pair)
 		}
-
-		for _, o := range os {
-			_, err := strconv.ParseInt(o.OrderNumber, 10, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "cannot parse ordernumber: %s", o.OrderNumber)
-			}
-
-			rate, err := strconv.ParseFloat(o.Rate, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "cannot parse rate: %s", o.Rate)
-			}
-
-			amount, err := strconv.ParseFloat(o.Amount, 64)
-			if err != nil {
-				return nil, errors.Wrapf(err, "cannot parse amount: %s", o.Amount)
-			}
-
-			var orderType models.OrderType
-			switch o.Type {
-			case "sell":
-				orderType = models.Ask
-			case "buy":
-				orderType = models.Bid
-			default:
-				return nil, errors.Errorf("unknown order type: %s", o.Type)
-			}
-
-			c := &models.Order{
-				ExchangeOrderID: o.OrderNumber,
-				Type:            orderType,
-				Trading:         trading,
-				Settlement:      settlement,
-				Price:           rate,
-				Amount:          amount,
-			}
-			orders = append(orders, c)
+		orderId,err:= order.GetString("clientOrderId")
+		if err != nil {
+			continue
 		}
+		side,err:= order.GetString("side")
+		if err != nil {
+			continue
+		}
+		orderType := models.Bid
+		if side == "buy"{
+			orderType= models.Ask
+		}
+		rate,err:= order.GetFloat64("rate")
+		if err != nil {
+			continue
+		}
+		amount,err:= order.GetFloat64("amount")
+		if err != nil {
+			continue
+		}
+		c := &models.Order{
+			ExchangeOrderID: orderId,
+			Type:            orderType,
+			Trading:         trading,
+			Settlement:      settlement,
+			Price:           rate,
+			Amount:          amount,
+		}
+		orders = append(orders, c)
+
 	}
 	return orders, nil
 }
@@ -273,15 +264,13 @@ func (h *HitbtcApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-
-	pair := fmt.Sprintf("%s_%s", settlement, trading)
-
+	pair := strings.ToLower(fmt.Sprintf("%s%s", settlement, trading))
 	args := make(map[string]string)
-	args["currencyPair"] = pair
-	args["rate"] = strconv.FormatFloat(price, 'g', -1, 64)
-	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
-
-	bs, err := h.privateApi(cmd, args)
+	args["side"] = cmd
+	args["symbol"] = pair
+	args["price"] = strconv.FormatFloat(price, 'g', -1, 64)
+	args["quantity"] = strconv.FormatFloat(amount, 'g', -1, 64)
+	bs, err := h.privateApi("POST","/api/2/order", args)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
@@ -307,7 +296,7 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 	args["currency"] = typ
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
 
-	bs, err := h.privateApi("withdraw", args)
+	bs, err := h.privateApi("POST","withdraw", args)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer deposit")
 	}
@@ -327,7 +316,7 @@ func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 	args := make(map[string]string)
 	args["orderNumber"] = orderNumber
 
-	bs, err := h.privateApi("cancelOrder", args)
+	bs, err := h.privateApi("POST","cancelOrder", args)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
 	}
@@ -345,7 +334,7 @@ func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 }
 
 func (h *HitbtcApi) Address(c string) (string, error) {
-	bs, err := h.privateApi("returnDepositAddresses", nil)
+	bs, err := h.privateApi("GET","returnDepositAddresses", nil)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch deposit address")
 	}
@@ -363,4 +352,3 @@ func (h *HitbtcApi) Address(c string) (string, error) {
 
 	return addr, nil
 }
-*/
