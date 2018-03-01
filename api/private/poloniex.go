@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/antonholmquist/jason"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 )
@@ -96,8 +94,6 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 		return nil, errors.Wrapf(err, "failed to fetch result of command %s", command)
 	}
 
-	logger.Get().Infof("[poloniex] private api called: cmd=%s req=%s, res=%.60s", command, spew.Sdump(args), string(resBody))
-
 	var errres errorResponse
 	err = json.Unmarshal(resBody, &errres)
 	if err != nil {
@@ -116,19 +112,24 @@ type poloniexFeeRate struct {
 }
 
 func (p *PoloniexApi) fetchFeeRate() (float64, error) {
-	var fee poloniexFeeRate
 
 	bs, err := p.privateApi("returnFeeInfo", nil)
 	if err != nil {
 		return 0, err
 	}
-
-	err = json.Unmarshal(bs, &fee)
+	json,err:= jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return 0, err
 	}
-
-	return fee.TakerFee, nil
+	makerFeeString,err:= json.GetString("takerFee")
+	if err != nil {
+		return 0, err
+	}
+	makerFee,err:=strconv.ParseFloat(makerFeeString,10)
+	if err != nil {
+		return 0, err
+	}
+	return makerFee, nil
 }
 
 func (p *PoloniexApi) PurchaseFeeRate() (float64, error) {
@@ -238,7 +239,7 @@ func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 			continue
 		}
 
-		trading, settlement, err := parseCurrencyPair(pair)
+		settlement, trading, err := parseCurrencyPair(pair)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot parse currency pair: %s", pair)
 		}
@@ -259,7 +260,7 @@ func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 				return nil, errors.Wrapf(err, "cannot parse amount: %s", o.Amount)
 			}
 
-			var orderType models.OrderType
+			orderType := models.Bid
 			switch o.Type {
 			case "sell":
 				orderType = models.Ask
@@ -304,20 +305,19 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
-	var res orderRespnose
-	err = json.Unmarshal(bs, &res)
+	json,err:= jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse response json %s", string(bs))
-	}
-	orderNumberInt, err := strconv.Atoi(res.OrderNumber)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse response json %s", string(bs))
-	}
-	if orderNumberInt <= 0 {
-		return "", errors.Errorf("invalid order number %v", res.OrderNumber)
 	}
 
-	return res.OrderNumber, nil
+	orderNumberInt, err := json.GetInt64("orderNumber")
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to parse order number int %s", string(bs))
+	}
+	if orderNumberInt <= 0 {
+		return "", errors.Errorf("invalid order number %v", orderNumberInt)
+	}
+	return strconv.Itoa(int(orderNumberInt)), nil
 }
 
 func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
@@ -325,13 +325,12 @@ func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, addition
 	args["address"] = addr
 	args["currency"] = typ
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
-
 	bs, err := p.privateApi("withdraw", args)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer deposit")
 	}
 	var res transferResponse
-	err = json.Unmarshal(bs, res)
+	err = json.Unmarshal(bs, &res)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
