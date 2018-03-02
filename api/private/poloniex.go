@@ -117,15 +117,15 @@ func (p *PoloniexApi) fetchFeeRate() (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	json,err:= jason.NewObjectFromBytes(bs)
+	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return 0, err
 	}
-	makerFeeString,err:= json.GetString("takerFee")
+	makerFeeString, err := json.GetString("takerFee")
 	if err != nil {
 		return 0, err
 	}
-	makerFee,err:=strconv.ParseFloat(makerFeeString,10)
+	makerFee, err := strconv.ParseFloat(makerFeeString, 10)
 	if err != nil {
 		return 0, err
 	}
@@ -305,7 +305,7 @@ func (p *PoloniexApi) Order(trading string, settlement string, ordertype models.
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
-	json,err:= jason.NewObjectFromBytes(bs)
+	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}

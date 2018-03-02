@@ -44,7 +44,7 @@ func TestNewClient(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient("hitbtc","APIKEY","SECRETKEY")
+	_, err = NewClient("hitbtc", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +78,7 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
-			settlements: []string{"BTC"},
+			settlements:       []string{"BTC"},
 			rateMap:           nil,
 			volumeMap:         nil,
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -222,7 +222,6 @@ func TestBitflyerOthers(t *testing.T) {
 	}
 }
 
-
 func TestPoloniexFee(t *testing.T) {
 	t.Parallel()
 	json := `{"makerFee": "0.00140000", "takerFee": "0.00240000", "thirtyDayVolume": "612.00248891", "nextTier": "1200.00000000"}`
@@ -247,11 +246,10 @@ func TestPoloniexFee(t *testing.T) {
 	}
 }
 
-
 func TestPoloniexBalances(t *testing.T) {
 	t.Parallel()
 	json := `{"BTC":"0.59098578","LTC":"3.31117268"}`
-	rt:=&FakeRoundTripper{message: json, status: http.StatusOK}
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("poloniex", rt)
 	balances, err := client.Balances()
 	if err != nil {
@@ -260,7 +258,7 @@ func TestPoloniexBalances(t *testing.T) {
 	if balances["BTC"] != 0.59098578 {
 		t.Errorf("PoloniexPrivateApi: Expected %v. Got %v", 4.12, balances)
 	}
-	rt.message=`{"LTC":{"available":"5.015","onOrders":"1.0025","btcValue":"0.078"},"NXT":{"available":"5.015","onOrders":"1.0025","btcValue":"0.078"}}`
+	rt.message = `{"LTC":{"available":"5.015","onOrders":"1.0025","btcValue":"0.078"},"NXT":{"available":"5.015","onOrders":"1.0025","btcValue":"0.078"}}`
 	balanceMap, err := client.CompleteBalances()
 	if err != nil {
 		panic(err)
@@ -296,7 +294,7 @@ func TestPoloniexOrders(t *testing.T) {
 func TestPoloniexOrder(t *testing.T) {
 	t.Parallel()
 	json := `{"orderNumber":31226040,"resultingTrades":[{"amount":"338.8732","date":"2014-10-18 23:03:21","rate":"0.00000173","total":"0.00058625","tradeID":"16164","type":"buy"}]}`
-	rt:=&FakeRoundTripper{message: json, status: http.StatusOK}
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("poloniex", rt)
 	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
 	if err != nil {
@@ -305,7 +303,7 @@ func TestPoloniexOrder(t *testing.T) {
 	if orderId != "31226040" {
 		t.Errorf("PoloniexPrivateApi: Expected %v. Got %v", "31226040", orderId)
 	}
-	rt.message=`{"success":1}`
+	rt.message = `{"success":1}`
 	err = client.CancelOrder(orderId, "BTC_ETH")
 	if err != nil {
 		t.Error(err)
@@ -315,7 +313,7 @@ func TestPoloniexOrder(t *testing.T) {
 func TestPoloniexOthers(t *testing.T) {
 	t.Parallel()
 	json := `{"response":"Withdrew 2398 NXT."}`
-	rt :=&FakeRoundTripper{message: json, status: http.StatusOK}
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("poloniex", rt)
 	if client.Transfer("", "", 0.1, 0.001) != nil {
 		t.Errorf("transfer should not be implemented")
@@ -326,12 +324,11 @@ func TestPoloniexOthers(t *testing.T) {
 	}
 }
 
-
 func TestHitbtcBalances(t *testing.T) {
 	t.Parallel()
 	json := `[{"currency": "ETH", "available": "10.000000000", "reserved":"0.560000000"},{"currency": "BTC","available":"0.010205869","reserved": "0"}]`
 	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
-	client := newTestPrivateClient("hitbtc",rt)
+	client := newTestPrivateClient("hitbtc", rt)
 	balances, err := client.Balances()
 	if err != nil {
 		t.Fatal(err)
@@ -348,7 +345,6 @@ func TestHitbtcBalances(t *testing.T) {
 		t.Error("HitbtcPrivateApi: balance map error")
 	}
 }
-
 
 func TestHitbtcOrders(t *testing.T) {
 	t.Parallel()
@@ -403,7 +399,7 @@ func TestHitbtcOrder(t *testing.T) {
         "createdAt": "2017-05-15T17:01:05.092Z",
         "updatedAt": "2017-05-15T17:01:05.092Z"
     }`
-	rt:=&FakeRoundTripper{message: json, status: http.StatusOK}
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("hitbtc", rt)
 	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
 	if err != nil {
@@ -412,7 +408,7 @@ func TestHitbtcOrder(t *testing.T) {
 	if orderId != "d8574207d9e3b16a4a5511753eeef175" {
 		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "d8574207d9e3b16a4a5511753eeef175", orderId)
 	}
-	rt.message=``
+	rt.message = ``
 	err = client.CancelOrder(orderId, "BTC_ETH")
 	if err != nil {
 		t.Error(err)
@@ -424,9 +420,9 @@ func TestHitbtcOthers(t *testing.T) {
 	json := `{
   "id": "d2ce578f-647d-4fa0-b1aa-4a27e5ee597b"
 }`
-	rt :=&FakeRoundTripper{message: json, status: http.StatusOK}
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("hitbtc", rt)
-	if err := client.Transfer("BTC", "test_id", 0.1, 0.001);err != nil {
+	if err := client.Transfer("BTC", "test_id", 0.1, 0.001); err != nil {
 		t.Fatal(err)
 	}
 	rt.message = `{

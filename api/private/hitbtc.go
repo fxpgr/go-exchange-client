@@ -8,14 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
+	"github.com/Jeffail/gabs"
 	"github.com/antonholmquist/jason"
+	"github.com/fxpgr/go-ccex-api-client/api/public"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 	"strconv"
-	"fmt"
 	"strings"
-	"github.com/Jeffail/gabs"
-	"github.com/fxpgr/go-ccex-api-client/api/public"
 )
 
 const (
@@ -23,17 +23,17 @@ const (
 )
 
 func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
-	hitbtcPublic,err:= public.NewHitbtcPublicApi()
+	hitbtcPublic, err := public.NewHitbtcPublicApi()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	pairs,err:= hitbtcPublic.CurrencyPairs()
+	pairs, err := hitbtcPublic.CurrencyPairs()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	var settlements []string
-	for _,v := range pairs {
-		settlements=append(settlements,v.Settlement)
+	for _, v := range pairs {
+		settlements = append(settlements, v.Settlement)
 	}
 	m := make(map[string]bool)
 	uniq := []string{}
@@ -49,7 +49,7 @@ func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
-		settlements:uniq,
+		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -64,7 +64,7 @@ type HitbtcApi struct {
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
-	settlements []string
+	settlements       []string
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
@@ -91,7 +91,7 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
-	req.SetBasicAuth(h.ApiKey,h.SecretKey)
+	req.SetBasicAuth(h.ApiKey, h.SecretKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := h.HttpClient.Do(req)
@@ -139,17 +139,17 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 }
 
 func (h *HitbtcApi) Balances() (map[string]float64, error) {
-	bs, err := h.privateApi("GET","/api/2/trading/balance", nil)
+	bs, err := h.privateApi("GET", "/api/2/trading/balance", nil)
 	if err != nil {
 		return nil, err
 	}
 	json, err := gabs.ParseJSON(bs)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	rateMap, err := json.Children()
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	m := make(map[string]float64)
 	for _, v := range rateMap {
@@ -161,9 +161,9 @@ func (h *HitbtcApi) Balances() (map[string]float64, error) {
 		if !ok {
 			continue
 		}
-		available,err := strconv.ParseFloat(availableStr,10)
+		available, err := strconv.ParseFloat(availableStr, 10)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		m[currency] = available
 	}
@@ -171,56 +171,55 @@ func (h *HitbtcApi) Balances() (map[string]float64, error) {
 }
 
 func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
-	bs, err := h.privateApi("GET","/api/2/trading/balance", nil)
+	bs, err := h.privateApi("GET", "/api/2/trading/balance", nil)
 	if err != nil {
 		return nil, err
 	}
 	json, err := gabs.ParseJSON(bs)
 
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 
 	rateMap, err := json.Children()
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	m :=make(map[string]*models.Balance)
+	m := make(map[string]*models.Balance)
 	for _, v := range rateMap {
 		availableStr, ok := v.Path("available").Data().(string)
 		if !ok {
 			continue
 		}
-		available,err := strconv.ParseFloat(availableStr,10)
+		available, err := strconv.ParseFloat(availableStr, 10)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		reservedStr, ok := v.Path("reserved").Data().(string)
 		if !ok {
 			continue
 		}
-		reserved,err := strconv.ParseFloat(reservedStr,10)
+		reserved, err := strconv.ParseFloat(reservedStr, 10)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		currency, ok := v.Path("currency").Data().(string)
 		if !ok {
 			continue
 		}
-		balance := models.NewBalance(available,reserved)
+		balance := models.NewBalance(available, reserved)
 		m[currency] = balance
 	}
 	return m, nil
 }
 
 func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
-	bs, err := h.privateApi("GET","/api/2/order", map[string]string{
-	})
+	bs, err := h.privateApi("GET", "/api/2/order", map[string]string{})
 	if err != nil {
 		return nil, err
 	}
-	json,err := gabs.ParseJSON(bs)
-	m,err := json.Children()
+	json, err := gabs.ParseJSON(bs)
+	m, err := json.Children()
 	if err != nil {
 		return nil, err
 	}
@@ -238,25 +237,25 @@ func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
 		if err != nil {
 			continue
 		}
-		quantity,err := strconv.ParseFloat(quantityStr,10)
+		quantity, err := strconv.ParseFloat(quantityStr, 10)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		priceStr := v.Path("price").Data().(string)
 		if err != nil {
 			continue
 		}
-		price,err := strconv.ParseFloat(priceStr,10)
+		price, err := strconv.ParseFloat(priceStr, 10)
 		if err != nil {
-			return nil,err
+			return nil, err
 		}
 		side := v.Path("side").Data().(string)
 		if err != nil {
 			continue
 		}
 		orderType := models.Bid
-		if side == "buy"{
-			orderType= models.Ask
+		if side == "buy" {
+			orderType = models.Ask
 		}
 		var settlement string
 		var trading string
@@ -298,12 +297,12 @@ func (h *HitbtcApi) Order(trading string, settlement string, ordertype models.Or
 	args["symbol"] = pair
 	args["price"] = strconv.FormatFloat(price, 'g', -1, 64)
 	args["quantity"] = strconv.FormatFloat(amount, 'g', -1, 64)
-	bs, err := h.privateApi("POST","/api/2/order", args)
+	bs, err := h.privateApi("POST", "/api/2/order", args)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to request order")
 	}
 
-	json,err:= jason.NewObjectFromBytes(bs)
+	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
@@ -322,21 +321,21 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
 	args["networkFee"] = strconv.FormatFloat(additionalFee, 'g', -1, 64)
 
-	bs, err := h.privateApi("POST","/api/2/account/crypto/withdraw", args)
+	bs, err := h.privateApi("POST", "/api/2/account/crypto/withdraw", args)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer deposit")
 	}
-	json,err:= jason.NewObjectFromBytes(bs)
+	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
-	_,err= json.GetString("id")
+	_, err = json.GetString("id")
 	return err
 }
 
 func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 	args := make(map[string]string)
-	_, err := h.privateApi("POST","/api/2/order/"+orderNumber, args)
+	_, err := h.privateApi("POST", "/api/2/order/"+orderNumber, args)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
 	}
@@ -344,7 +343,7 @@ func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 }
 
 func (h *HitbtcApi) Address(c string) (string, error) {
-	bs, err := h.privateApi("GET","/api/2/account/crypto/address/"+c, nil)
+	bs, err := h.privateApi("GET", "/api/2/account/crypto/address/"+c, nil)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch deposit address")
 	}
@@ -352,7 +351,7 @@ func (h *HitbtcApi) Address(c string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse json")
 	}
-	address,err:=json.GetString("address")
+	address, err := json.GetString("address")
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to take address of %s", c)
 	}
