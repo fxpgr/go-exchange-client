@@ -22,7 +22,6 @@ type HitbtcApiConfig struct {
 }
 
 func NewHitbtcPublicApi() (*HitbtcApi, error) {
-
 	api := &HitbtcApi{
 		BaseURL:           HITBTC_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
@@ -92,7 +91,6 @@ func (h *HitbtcApi) fetchSettlements() error {
 		}
 	}
 	h.settlements = uniq
-	fmt.Println(uniq)
 	return nil
 }
 
@@ -137,7 +135,6 @@ func (h *HitbtcApi) fetchRate() error {
 		}
 		if settlement == "" || trading == "" {
 			continue
-
 		}
 		// update rate
 		last, ok := v.Path("last").Data().(string)

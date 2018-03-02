@@ -78,6 +78,7 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
+			settlements: []string{"BTC"},
 			rateMap:           nil,
 			volumeMap:         nil,
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -336,7 +337,7 @@ func TestHitbtcBalances(t *testing.T) {
 		t.Fatal(err)
 	}
 	if balances["ETH"] != 10.000000000 {
-		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", 10.000000000, balances["ETH"])
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", 10.000000000, balances["ETH"])
 	}
 	balanceMap, err := client.CompleteBalances()
 	if err != nil {
@@ -344,6 +345,95 @@ func TestHitbtcBalances(t *testing.T) {
 	}
 
 	if balanceMap["ETH"].Available != 10 || balanceMap["ETH"].OnOrders != 0.56 {
-		t.Error("BitflyerPrivateApi: balance map error")
+		t.Error("HitbtcPrivateApi: balance map error")
+	}
+}
+
+
+func TestHitbtcOrders(t *testing.T) {
+	t.Parallel()
+	json := `[
+  {
+    "id": 840450210,
+    "clientOrderId": "c1837634ef81472a9cd13c81e7b91401",
+    "symbol": "ETHBTC",
+    "side": "buy",
+    "status": "partiallyFilled",
+    "type": "limit",
+    "timeInForce": "GTC",
+    "quantity": "0.020",
+    "price": "0.046001",
+    "cumQuantity": "0.005",
+    "createdAt": "2017-05-12T17:17:57.437Z",
+    "updatedAt": "2017-05-12T17:18:08.610Z"
+  }
+]`
+	client := newTestPrivateClient("hitbtc", &FakeRoundTripper{message: json, status: http.StatusOK})
+	orders, err := client.ActiveOrders()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if orders[0].Settlement != "BTC" {
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "BTC", orders[0].Settlement)
+	}
+	if orders[0].Trading != "ETH" {
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "ETH", orders[0].Trading)
+	}
+	if orders[0].ExchangeOrderID != "c1837634ef81472a9cd13c81e7b91401" {
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "c1837634ef81472a9cd13c81e7b91401", orders[0].ExchangeOrderID)
+	}
+	if orders[0].Type != models.Ask {
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "BUY", orders[0].Type)
+	}
+}
+
+func TestHitbtcOrder(t *testing.T) {
+	t.Parallel()
+	json := `{
+        "id": 0,
+        "clientOrderId": "d8574207d9e3b16a4a5511753eeef175",
+        "symbol": "ETHBTC",
+        "side": "sell",
+        "status": "new",
+        "type": "limit",
+        "timeInForce": "GTC",
+        "quantity": "0.063",
+        "price": "0.046016",
+        "cumQuantity": "0.000",
+        "createdAt": "2017-05-15T17:01:05.092Z",
+        "updatedAt": "2017-05-15T17:01:05.092Z"
+    }`
+	rt:=&FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("hitbtc", rt)
+	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
+	if err != nil {
+		panic(err)
+	}
+	if orderId != "d8574207d9e3b16a4a5511753eeef175" {
+		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "d8574207d9e3b16a4a5511753eeef175", orderId)
+	}
+	rt.message=``
+	err = client.CancelOrder(orderId, "BTC_ETH")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestHitbtcOthers(t *testing.T) {
+	t.Parallel()
+	json := `{
+  "id": "d2ce578f-647d-4fa0-b1aa-4a27e5ee597b"
+}`
+	rt :=&FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("hitbtc", rt)
+	if err := client.Transfer("BTC", "test_id", 0.1, 0.001);err != nil {
+		t.Fatal(err)
+	}
+	rt.message = `{
+  "address": "NXT-G22U-BYF7-H8D9-3J27W",
+  "paymentId": "616598347865"
+}`
+	if _, err := client.Address("LTC"); err != nil {
+		t.Fatal(err)
 	}
 }
