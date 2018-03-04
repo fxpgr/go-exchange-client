@@ -173,7 +173,7 @@ func (p *PoloniexApi) Volume(trading string, settlement string) (float64, error)
 	}
 }
 
-func (p *PoloniexApi) RateMap() (map[string]map[string]float64,error) {
+func (p *PoloniexApi) RateMap() (map[string]map[string]float64, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 	now := time.Now()
@@ -184,7 +184,7 @@ func (p *PoloniexApi) RateMap() (map[string]map[string]float64,error) {
 		}
 		p.rateLastUpdated = now
 	}
-	return p.rateMap,nil
+	return p.rateMap, nil
 }
 
 func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {

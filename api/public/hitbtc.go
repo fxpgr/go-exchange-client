@@ -175,7 +175,7 @@ func (h *HitbtcApi) fetchRate() error {
 	return nil
 }
 
-func (h *HitbtcApi) RateMap() (map[string]map[string]float64,error) {
+func (h *HitbtcApi) RateMap() (map[string]map[string]float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 	now := time.Now()
@@ -186,7 +186,7 @@ func (h *HitbtcApi) RateMap() (map[string]map[string]float64,error) {
 		}
 		h.rateLastUpdated = now
 	}
-	return h.rateMap,nil
+	return h.rateMap, nil
 }
 
 func (h *HitbtcApi) CurrencyPairs() ([]models.CurrencyPair, error) {

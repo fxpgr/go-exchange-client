@@ -194,7 +194,7 @@ func (b *BitflyerApi) Rate(trading string, settlement string) (float64, error) {
 	}
 }
 
-func (b *BitflyerApi) RateMap() (map[string]map[string]float64,error) {
+func (b *BitflyerApi) RateMap() (map[string]map[string]float64, error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 	now := time.Now()
@@ -205,5 +205,5 @@ func (b *BitflyerApi) RateMap() (map[string]map[string]float64,error) {
 		}
 		b.rateLastUpdated = now
 	}
-	return b.rateMap,nil
+	return b.rateMap, nil
 }
