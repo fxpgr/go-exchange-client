@@ -18,6 +18,7 @@ type PublicClient interface {
 	CurrencyPairs() ([]models.CurrencyPair, error)
 	Rate(trading string, settlement string) (float64, error)
 	RateMap() (map[string]map[string]float64, error)
+	FrozenCurrency() ([]string, error)
 }
 
 func NewDefaultClient(exchangeName string) PublicClient {

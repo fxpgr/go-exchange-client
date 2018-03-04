@@ -11,6 +11,7 @@ import (
 	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"encoding/json"
 )
 
 const (
@@ -212,6 +213,27 @@ func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {
 	}
 }
 
+func (p *PoloniexApi) FrozenCurrency() ([]string,error) {
+	url := p.publicApiUrl("returnCurrencies")
+	resp, err := p.HttpClient.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	var frozens []string
+	m := make(map[string]Currency)
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return nil, errors.Wrap(err, "failed to parse response")
+	}
+	for k,v := range m {
+		if v.Frozen == 1 {
+			frozens = append(frozens,k)
+		}
+	}
+	return frozens, nil
+}
+
 type Currency struct {
 	ID             int     `json:"id"`
 	Name           string  `json:"name"`
@@ -225,19 +247,5 @@ type Currency struct {
 
 /*
 func (p *PoloniexApi) Currencies() (map[string]Currency, error) {
-	url := p.publicApiUrl("returnCurrencies")
-
-	resp, err := p.HttpClient.Get(url)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-
-	m := make(map[string]Currency)
-	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
-		return nil, errors.Wrap(err, "failed to parse response")
-	}
-
-	return m, nil
 }
 */

@@ -207,3 +207,7 @@ func (b *BitflyerApi) RateMap() (map[string]map[string]float64, error) {
 	}
 	return b.rateMap, nil
 }
+
+func (b *BitflyerApi) FrozenCurrency()([]string,error){
+	return []string{},nil
+}

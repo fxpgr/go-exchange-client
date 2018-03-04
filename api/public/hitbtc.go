@@ -31,6 +31,7 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 
 		m: new(sync.Mutex),
 	}
+	api.fetchSettlements()
 	return api, nil
 }
 
@@ -261,4 +262,41 @@ func (h *HitbtcApi) Rate(trading string, settlement string) (float64, error) {
 	} else {
 		return rate, nil
 	}
+}
+
+func (h *HitbtcApi) FrozenCurrency() ([]string,error) {
+	url := h.publicApiUrl("currency")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	json, err := gabs.ParseJSON(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	currencyMap, err := json.Children()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	var frozens []string
+	for _, v := range currencyMap {
+		payoutEnable, ok := v.Path("payoutEnabled").Data().(bool)
+		if !ok {
+			continue
+		}
+		if !payoutEnable {
+			currency, ok := v.Path("id").Data().(string)
+			if !ok {
+				continue
+			}
+			frozens = append(frozens, currency)
+		}
+	}
+	return frozens, nil
 }
