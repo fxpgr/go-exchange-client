@@ -120,7 +120,7 @@ func (b *BitflyerApi) fetchRate() error {
 	return nil
 }
 
-func (b *BitflyerApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
+func (b *BitflyerApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	b.m.Lock()
 	defer b.m.Unlock()
 
@@ -133,10 +133,10 @@ func (b *BitflyerApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
 		b.rateLastUpdated = now
 	}
 
-	var pairs []*models.CurrencyPair
+	var pairs []models.CurrencyPair
 	for trading, m := range b.rateMap {
 		for settlement := range m {
-			pair := &models.CurrencyPair{
+			pair := models.CurrencyPair{
 				Trading:    trading,
 				Settlement: settlement,
 			}
@@ -192,4 +192,18 @@ func (b *BitflyerApi) Rate(trading string, settlement string) (float64, error) {
 	} else {
 		return rate, nil
 	}
+}
+
+func (b *BitflyerApi) RateMap() (map[string]map[string]float64,error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	now := time.Now()
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
+		err := b.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		b.rateLastUpdated = now
+	}
+	return b.rateMap,nil
 }

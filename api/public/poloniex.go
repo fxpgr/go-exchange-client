@@ -124,7 +124,7 @@ func (p *PoloniexApi) fetchRate() error {
 	return nil
 }
 
-func (p *PoloniexApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
+func (p *PoloniexApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
@@ -137,10 +137,10 @@ func (p *PoloniexApi) CurrencyPairs() ([]*models.CurrencyPair, error) {
 		p.rateLastUpdated = now
 	}
 
-	var pairs []*models.CurrencyPair
+	var pairs []models.CurrencyPair
 	for trading, m := range p.rateMap {
 		for settlement := range m {
-			pair := &models.CurrencyPair{
+			pair := models.CurrencyPair{
 				Trading:    trading,
 				Settlement: settlement,
 			}
@@ -171,6 +171,20 @@ func (p *PoloniexApi) Volume(trading string, settlement string) (float64, error)
 	} else {
 		return volume, nil
 	}
+}
+
+func (p *PoloniexApi) RateMap() (map[string]map[string]float64,error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+	now := time.Now()
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
+		err := p.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		p.rateLastUpdated = now
+	}
+	return p.rateMap,nil
 }
 
 func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {

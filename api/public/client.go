@@ -15,8 +15,9 @@ var (
 //go:generate mockery -name=PublicClient
 type PublicClient interface {
 	Volume(trading string, settlement string) (float64, error)
-	CurrencyPairs() ([]*models.CurrencyPair, error)
+	CurrencyPairs() ([]models.CurrencyPair, error)
 	Rate(trading string, settlement string) (float64, error)
+	RateMap() (map[string]map[string]float64, error)
 }
 
 func NewDefaultClient(exchangeName string) PublicClient {
