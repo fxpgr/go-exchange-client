@@ -227,7 +227,7 @@ func (p *PoloniexApi) FrozenCurrency() ([]string,error) {
 		return nil, errors.Wrap(err, "failed to parse response")
 	}
 	for k,v := range m {
-		if v.Frozen == 1 {
+		if v.Frozen == 1 || v.Delisted == 1 || v.Disabled == 1{
 			frozens = append(frozens,k)
 		}
 	}
