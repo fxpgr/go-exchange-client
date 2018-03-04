@@ -222,8 +222,7 @@ func TestHitbtcRate(t *testing.T) {
 		"feeCurrency": "BTC"
 	}
 	]`
-	jsonTicker := `[
-  {
+	jsonTicker := `[{
     "ask": "0.050043",
     "bid": "0.050042",
     "last": "0.050042",
@@ -234,8 +233,7 @@ func TestHitbtcRate(t *testing.T) {
     "volumeQuote": "1782.625000",
     "timestamp": "2017-05-12T14:57:19.999Z",
     "symbol": "ETHBTC"
-  }
-]`
+  }]`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
 	client := newTestHitbtcPublicClient(fakeRoundTripper)
 	fakeRoundTripper.message = jsonTicker

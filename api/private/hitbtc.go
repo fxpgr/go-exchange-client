@@ -107,35 +107,87 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 	return resBody, nil
 }
 
-func (h *HitbtcApi) fetchFeeRate() (float64, error) {
-	purchaseFeeurl := "/api/2/trading/fee/ETHBTC"
+func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+	purchaseFeeurl := "/api/2/symbol"
 	method := "GET"
 	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
-		return 1, err
+		return nil, err
 	}
-	purchaseFeeObject, err := jason.NewObjectFromBytes(resBody)
+	json, err := gabs.ParseJSON(resBody)
 	if err != nil {
-		return 1, err
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	purchaseFeeMap := purchaseFeeObject.Map()
-	purchaseFee, err := purchaseFeeMap["takeLiquidityRate"].Float64()
+	symbolMap, err := json.Children()
 	if err != nil {
-		return 1, err
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	return purchaseFee, nil
-}
-
-func (h *HitbtcApi) PurchaseFeeRate() (float64, error) {
-	return h.fetchFeeRate()
-}
-
-func (h *HitbtcApi) SellFeeRate() (float64, error) {
-	return h.fetchFeeRate()
+	traderFeeMap := make(map[string]map[string]TradeFee)
+	for _, v := range symbolMap {
+		takeLiquidityRateStr, ok := v.Path("takeLiquidityRate").Data().(string)
+		if !ok {
+			continue
+		}
+		takeLiquidityRate,err := strconv.ParseFloat(takeLiquidityRateStr,10)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json")
+		}
+		provideLiquidityRateStr, ok := v.Path("provideLiquidityRate").Data().(string)
+		if !ok {
+			continue
+		}
+		provideLiquidityRate,err := strconv.ParseFloat(provideLiquidityRateStr,10)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json")
+		}
+		baseCurrency, ok := v.Path("baseCurrency").Data().(string)
+		if !ok {
+			continue
+		}
+		quoteCurrency, ok := v.Path("quoteCurrency").Data().(string)
+		if !ok {
+			continue
+		}
+		traderFeeMap[baseCurrency][quoteCurrency] = TradeFee{
+			TakerFee:takeLiquidityRate,
+			MakerFee:provideLiquidityRate,
+		}
+	}
+	return traderFeeMap, nil
 }
 
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
-	return nil, nil
+	purchaseFeeurl := "/api/2/currency"
+	method := "GET"
+	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+	json, err := gabs.ParseJSON(resBody)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	currencyMap, err := json.Children()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	transferFeeMap := make(map[string]float64)
+	for _, v := range currencyMap {
+		payoutFeeStr, ok := v.Path("payoutFee").Data().(string)
+		if !ok {
+			continue
+		}
+		payoutFee,err := strconv.ParseFloat(payoutFeeStr,10)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json")
+		}
+		currency, ok := v.Path("id").Data().(string)
+		if !ok {
+			continue
+		}
+		transferFeeMap[currency] = payoutFee
+	}
+	return transferFeeMap, nil
 }
 
 func (h *HitbtcApi) Balances() (map[string]float64, error) {

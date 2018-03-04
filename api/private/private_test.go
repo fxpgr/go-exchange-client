@@ -54,23 +54,31 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 	endpoint := "http://localhost:4243"
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
+		n := make(map[string]float64)
+		n["JPY"] = 10000
+		m := make(map[string]map[string]float64)
+		m["BTC"] = n
 		return &BitflyerApi{
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
-			rateMap:           nil,
+			rateMap:           m,
 			volumeMap:         nil,
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 			m:                 new(sync.Mutex),
 		}
 	case "poloniex":
+		n := make(map[string]float64)
+		n["BTC"] = 0.1
+		m := make(map[string]map[string]float64)
+		m["ETH"] = n
 		return &PoloniexApi{
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
-			rateMap:           nil,
+			rateMap:           m,
 			volumeMap:         nil,
-			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			rateLastUpdated:   time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC),
 			m:                 new(sync.Mutex),
 		}
 	case "hitbtc":
@@ -93,20 +101,14 @@ func TestBitflyerFee(t *testing.T) {
 	json := `{
   "commission_rate": 0.001
 }`
-	client := newTestPrivateClient("bitflyer", &FakeRoundTripper{message: json, status: http.StatusOK})
-	fee, err := client.PurchaseFeeRate()
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("bitflyer", rt)
+	fee, err := client.TradeFeeRate()
 	if err != nil {
 		panic(err)
 	}
-	if fee != 0.001 {
-		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", 0.001, fee)
-	}
-	fee, err = client.SellFeeRate()
-	if err != nil {
-		panic(err)
-	}
-	if fee != 0.001 {
-		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", 0.001, fee)
+	if fee["BTC"]["JPY"].MakerFee != 0.001 || fee["BTC"]["JPY"].TakerFee != 0.001 {
+		t.Errorf("PoloniexPrivateApi: Expected %v %v. Got %v %v", 0.001, 0.001, fee["BTC"]["JPY"].MakerFee, fee["BTC"]["JPY"].TakerFee)
 	}
 	_, err = client.TransferFee()
 	if err != nil {
@@ -225,21 +227,16 @@ func TestBitflyerOthers(t *testing.T) {
 func TestPoloniexFee(t *testing.T) {
 	t.Parallel()
 	json := `{"makerFee": "0.00140000", "takerFee": "0.00240000", "thirtyDayVolume": "612.00248891", "nextTier": "1200.00000000"}`
-	client := newTestPrivateClient("poloniex", &FakeRoundTripper{message: json, status: http.StatusOK})
-	fee, err := client.PurchaseFeeRate()
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("poloniex", rt)
+	fee, err := client.TradeFeeRate()
 	if err != nil {
 		panic(err)
 	}
-	if fee != 0.00240 {
-		t.Errorf("PoloniexPrivateApi: Expected %v. Got %v", 0.0024, fee)
+	if fee["ETH"]["BTC"].MakerFee != 0.0014 || fee["ETH"]["BTC"].TakerFee != 0.0024 {
+		t.Errorf("PoloniexPrivateApi: Expected %v %v. Got %v %v", 0.0014, 0.0024, fee["ETH"]["BTC"].MakerFee, fee["ETH"]["BTC"].TakerFee)
 	}
-	fee, err = client.SellFeeRate()
-	if err != nil {
-		panic(err)
-	}
-	if fee != 0.00240 {
-		t.Errorf("PoloniexPrivateApi: Expected %v. Got %v", 0.0024, fee)
-	}
+	rt.message = `{"1CR":{"id":1,"name":"1CRedit","txFee":"0.01000000","minConf":3,"depositAddress":null,"disabled":0,"delisted":1,"frozen":0},"ABY":{"id":2,"name":"ArtByte","txFee":"0.01000000","minConf":8,"depositAddress":null,"disabled":0,"delisted":1,"frozen":0}}`
 	_, err = client.TransferFee()
 	if err != nil {
 		panic(err)

@@ -17,6 +17,8 @@ import (
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"strings"
+	"github.com/fxpgr/go-ccex-api-client/logger"
 )
 
 const (
@@ -26,7 +28,7 @@ const (
 func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 	return &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
+		RateCacheDuration: 7 * 24 * time.Hour,
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
 		rateMap:           nil,
@@ -51,12 +53,25 @@ type PoloniexApi struct {
 	m *sync.Mutex
 }
 
+func parsePoloCurrencyPair(s string) (string, string, error) {
+	xs := strings.Split(s, "_")
+
+	if len(xs) != 2 {
+		return "", "", errors.New("invalid ticker title")
+	}
+
+	return xs[0], xs[1], nil
+}
+
+func (p *PoloniexApi) baseUrl() string {
+	return p.BaseURL
+}
+
 func (p *PoloniexApi) privateApiUrl() string {
 	return p.BaseURL
 }
 
 func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte, error) {
-
 	val := url.Values{}
 	val.Add("command", command)
 	val.Add("nonce", strconv.FormatInt(time.Now().UnixNano(), 10))
@@ -111,37 +126,150 @@ type poloniexFeeRate struct {
 	TakerFee float64 `json:"takerFee"`
 }
 
-func (p *PoloniexApi) fetchFeeRate() (float64, error) {
+func (p *PoloniexApi) fetchRate() error {
+	p.rateMap = make(map[string]map[string]float64)
+	p.volumeMap = make(map[string]map[string]float64)
+	url := p.baseUrl()+"returnTicker"
 
+	resp, err := p.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	json, err := jason.NewObjectFromReader(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse json")
+	}
+
+	rateMap := json.Map()
+	for k, v := range rateMap {
+		settlement, trading, err := parsePoloCurrencyPair(k)
+		if err != nil {
+			logger.Get().Warn("couldn't parse currency pair", err)
+			continue
+		}
+
+		obj, err := v.Object()
+		if err != nil {
+			return err
+		}
+
+		// update rate
+		last, err := obj.GetString("last")
+		if err != nil {
+			return err
+		}
+
+		lastf, err := strconv.ParseFloat(last, 64)
+		if err != nil {
+			return err
+		}
+
+		m, ok := p.rateMap[trading]
+		if !ok {
+			m = make(map[string]float64)
+			p.rateMap[trading] = m
+		}
+		m[settlement] = lastf
+
+		// update volume
+		volume, err := obj.GetString("baseVolume")
+		if err != nil {
+			return err
+		}
+
+		volumef, err := strconv.ParseFloat(volume, 64)
+		if err != nil {
+			return err
+		}
+
+		m, ok = p.volumeMap[trading]
+		if !ok {
+			m = make(map[string]float64)
+			p.volumeMap[trading] = m
+		}
+		m[settlement] = volumef
+	}
+	return nil
+}
+
+func (p *PoloniexApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	now := time.Now()
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
+		err := p.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		p.rateLastUpdated = now
+	}
 	bs, err := p.privateApi("returnFeeInfo", nil)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	makerFeeString, err := json.GetString("takerFee")
+	makerFeeString, err := json.GetString("makerFee")
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	makerFee, err := strconv.ParseFloat(makerFeeString, 10)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return makerFee, nil
+	takerFeeString, err := json.GetString("takerFee")
+	if err != nil {
+		return nil, err
+	}
+	takerFee, err := strconv.ParseFloat(takerFeeString, 10)
+	if err != nil {
+		return nil, err
+	}
+
+	traderFeeMap := make(map[string]map[string]TradeFee)
+	for trading,v := range p.rateMap {
+		m := make(map[string]TradeFee)
+		for settlement,_:= range v {
+			m[settlement] = TradeFee{TakerFee:takerFee,MakerFee:makerFee}
+		}
+		traderFeeMap[trading] = m
+	}
+
+	return traderFeeMap, nil
 }
 
-func (p *PoloniexApi) PurchaseFeeRate() (float64, error) {
-	return p.fetchFeeRate()
-}
-
-func (p *PoloniexApi) SellFeeRate() (float64, error) {
-	return p.fetchFeeRate()
+type Currency struct {
+	ID             int     `json:"id"`
+	Name           string  `json:"name"`
+	TxFee          float64 `json:"txFee,string"`
+	MinConf        int     `json:"minConf"`
+	DepositAddress string  `json:"depositAddress"`
+	Disabled       int     `json:"disabled"`
+	Delisted       int     `json:"delisted"`
+	Frozen         int     `json:"frozen"`
 }
 
 func (p *PoloniexApi) TransferFee() (map[string]float64, error) {
-	return nil, nil
+	url := p.baseUrl() + "/public?command=returnCurrencies"
+	resp, err := p.HttpClient.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	transferFeeMap := make(map[string]float64)
+	m := make(map[string]Currency)
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return nil, errors.Wrap(err, "failed to parse response")
+	}
+	for k,v := range m {
+		transferFeeMap[k] = v.TxFee
+	}
+	return transferFeeMap, nil
 }
 
 func (p *PoloniexApi) Balances() (map[string]float64, error) {

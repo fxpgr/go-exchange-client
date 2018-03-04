@@ -125,8 +125,32 @@ func (b *BitflyerApi) PurchaseFeeRate() (float64, error) {
 	return purchaseFee, nil
 }
 
-func (b *BitflyerApi) SellFeeRate() (float64, error) {
-	return b.PurchaseFeeRate()
+func (b *BitflyerApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+	purchaseFeeurl := "/v1/me/gettradingcommission?product_code=BTC_JPY"
+	method := "GET"
+	resBody, err := b.privateApi(method, purchaseFeeurl, map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+	purchaseFeeObject, err := jason.NewObjectFromBytes(resBody)
+	if err != nil {
+		return nil, err
+	}
+	purchaseFeeMap := purchaseFeeObject.Map()
+	purchaseFee, err := purchaseFeeMap["commission_rate"].Float64()
+	if err != nil {
+		return nil, err
+	}
+
+	traderFeeMap := make(map[string]map[string]TradeFee)
+	for trading,v := range b.rateMap {
+		m := make(map[string]TradeFee)
+		for settlement,_:= range v {
+			m[settlement] = TradeFee{TakerFee:purchaseFee,MakerFee:purchaseFee}
+		}
+		traderFeeMap[trading] = m
+	}
+	return traderFeeMap,nil
 }
 
 func (b *BitflyerApi) TransferFee() (map[string]float64, error) {

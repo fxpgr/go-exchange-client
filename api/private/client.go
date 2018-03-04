@@ -6,11 +6,16 @@ import (
 	"strings"
 )
 
+type TradeFee struct {
+	MakerFee float64
+	TakerFee float64
+}
+
 //go:generate mockery -name=PrivateClient
 type PrivateClient interface {
-	PurchaseFeeRate() (float64, error)
-	SellFeeRate() (float64, error)
+	TradeFeeRate() (map[string]map[string]TradeFee, error)
 	TransferFee() (map[string]float64, error)
+
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
