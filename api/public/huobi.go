@@ -115,6 +115,10 @@ func (h *HuobiApi) fetchRate() error {
 			defer wg.Done()
 			url := h.publicApiUrl("/market/detail/merged?symbol=" + strings.ToLower(trading) + strings.ToLower(settlement))
 			resp, err := h.HttpClient.Get(url)
+			if err != nil {
+				ch <- &HuobiTickResponse{nil, trading, settlement, err}
+				return
+			}
 			defer resp.Body.Close()
 			byteArray, err := ioutil.ReadAll(resp.Body)
 			ch <- &HuobiTickResponse{byteArray, trading, settlement, err}
