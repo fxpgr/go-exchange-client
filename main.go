@@ -16,5 +16,10 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(cli2.FrozenCurrency())
-
+	cli3, err := public.NewClient("huobi")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(cli3.CurrencyPairs())
+	fmt.Println(cli3.RateMap())
 }

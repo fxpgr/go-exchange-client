@@ -78,6 +78,25 @@ func newTestHitbtcPublicClient(rt http.RoundTripper) PublicClient {
 	return api
 }
 
+func newTestHuobiPublicClient(rt http.RoundTripper) PublicClient {
+	endpoint := "http://localhost:4243"
+	n := make(map[string]float64)
+	n["BTC"] = 0.1
+	m := make(map[string]map[string]float64)
+	m["ETH"] = n
+	api := &HuobiApi{
+		BaseURL:           endpoint,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        &http.Client{Transport: rt},
+		rateMap:           m,
+		volumeMap:         m,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
+	}
+	api.fetchRate()
+	return api
+}
+
 func newTestBitflyerPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	api := &BitflyerApi{
@@ -317,6 +336,52 @@ func TestHitbtcCurrencyPairs(t *testing.T) {
 	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
 	client := newTestHitbtcPublicClient(fakeRoundTripper)
 	fakeRoundTripper.message = jsonTicker
+	pairs, err := client.CurrencyPairs()
+	if err != nil {
+		panic(err)
+	}
+	for _, _ = range pairs {
+	}
+}
+
+func TestHuobiRate(t *testing.T) {
+	t.Parallel()
+	jsonSymbol := `{"status":"ok","data":[{"base-currency":"nas","quote-currency":"eth","price-precision":6,"amount-precision":4,"symbol-partition":"innovation"},{"base-currency":"eos","quote-currency":"eth","price-precision":8,"amount-precision":2,"symbol-partition":"main"},{"base-currency":"swftc","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"zec","quote-currency":"usdt","price-precision":2,"amount-precision":4,"symbol-partition":"main"},{"base-currency":"evx","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"mds","quote-currency":"eth","price-precision":8,"amount-precision":0,"symbol-partition":"innovation"}]}`
+	jsonTicker := `{"status":"ok","ch":"market.naseth.detail.merged","ts":1520335882838,"tick":{"amount":285754.506381807669901550,"open":0.009318000000000000,"close":0.008959000000000000,"high":0.009385000000000000,"id":3404226217,"count":7073,"low":0.008800000000000000,"version":3404226217,"ask":[0.009001000000000000,74.000000000000000000],"vol":2618.884466247149233010811750000000000000,"bid":[0.008888000000000000,57.917400000000000000]}}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestHuobiPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonTicker
+	rate, err := client.Rate("NAS", "ETH")
+	if err != nil {
+		panic(err)
+	}
+	if rate != 0.0089590 {
+		t.Errorf("HuobiPublicApi: Expected %v. Got %v", 0.0089590, rate)
+	}
+}
+
+func TestHuobiVolume(t *testing.T) {
+	t.Parallel()
+	jsonSymbol := `{"status":"ok","data":[{"base-currency":"nas","quote-currency":"eth","price-precision":6,"amount-precision":4,"symbol-partition":"innovation"},{"base-currency":"eos","quote-currency":"eth","price-precision":8,"amount-precision":2,"symbol-partition":"main"},{"base-currency":"swftc","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"zec","quote-currency":"usdt","price-precision":2,"amount-precision":4,"symbol-partition":"main"},{"base-currency":"evx","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"mds","quote-currency":"eth","price-precision":8,"amount-precision":0,"symbol-partition":"innovation"}]}`
+	jsonTicker := `{"status":"ok","ch":"market.naseth.detail.merged","ts":1520335882838,"tick":{"amount":285754.506381807669901550,"open":0.009318000000000000,"close":0.008959000000000000,"high":0.009385000000000000,"id":3404226217,"count":7073,"low":0.008800000000000000,"version":3404226217,"ask":[0.009001000000000000,74.000000000000000000],"vol":2618.884466247149233010811750000000000000,"bid":[0.008888000000000000,57.917400000000000000]}}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestHuobiPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonTicker
+	volume, err := client.Volume("NAS", "ETH")
+	if err != nil {
+		panic(err)
+	}
+	if volume !=2618.88446624714923301081175 {
+		t.Errorf("HitbtcPublicApi: Expected %v. Got %v", 2618.88446624714923301081175, volume)
+	}
+}
+
+func TestHuobiCurrencyPairs(t *testing.T) {
+	t.Parallel()
+	jsonSymbol := `{"status":"ok","data":[{"base-currency":"nas","quote-currency":"eth","price-precision":6,"amount-precision":4,"symbol-partition":"innovation"},{"base-currency":"eos","quote-currency":"eth","price-precision":8,"amount-precision":2,"symbol-partition":"main"},{"base-currency":"swftc","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"zec","quote-currency":"usdt","price-precision":2,"amount-precision":4,"symbol-partition":"main"},{"base-currency":"evx","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"mds","quote-currency":"eth","price-precision":8,"amount-precision":0,"symbol-partition":"innovation"}]}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestHuobiPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonSymbol
 	pairs, err := client.CurrencyPairs()
 	if err != nil {
 		panic(err)

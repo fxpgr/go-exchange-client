@@ -30,14 +30,14 @@ testdeps:
 pretest: testdeps lint vet fmtcheck
 
 gotest:
-	go test -race $$(go list ./... | grep -v vendor) -cover
+	go test $$(go list ./... | grep -v vendor) -cover
 
 test: pretest gotest
 
 test-short:	testdeps gotest
 
 test-ci: pretest
-	go test -race $$(go list ./... | grep -v vendor) -cover -coverprofile=.coverprofile .
+	go test $$(go list ./... | grep -v vendor) -cover -coverprofile=.coverprofile .
 	goveralls -coverprofile=.coverprofile -repotoken ${CI_TOKEN} -coverprofile=.profile.cov
 
 test-travis: pretest
