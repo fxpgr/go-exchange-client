@@ -371,7 +371,7 @@ func TestHuobiVolume(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	if volume !=2618.88446624714923301081175 {
+	if volume != 2618.88446624714923301081175 {
 		t.Errorf("HitbtcPublicApi: Expected %v. Got %v", 2618.88446624714923301081175, volume)
 	}
 }

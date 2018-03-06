@@ -15,10 +15,10 @@ import (
 	"time"
 
 	"github.com/antonholmquist/jason"
+	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 	"strings"
-	"github.com/fxpgr/go-ccex-api-client/logger"
 )
 
 const (
@@ -129,7 +129,7 @@ type poloniexFeeRate struct {
 func (p *PoloniexApi) fetchRate() error {
 	p.rateMap = make(map[string]map[string]float64)
 	p.volumeMap = make(map[string]map[string]float64)
-	url := p.baseUrl()+"returnTicker"
+	url := p.baseUrl() + "returnTicker"
 
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
@@ -232,10 +232,10 @@ func (p *PoloniexApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 	}
 
 	traderFeeMap := make(map[string]map[string]TradeFee)
-	for trading,v := range p.rateMap {
+	for trading, v := range p.rateMap {
 		m := make(map[string]TradeFee)
-		for settlement,_:= range v {
-			m[settlement] = TradeFee{TakerFee:takerFee,MakerFee:makerFee}
+		for settlement, _ := range v {
+			m[settlement] = TradeFee{TakerFee: takerFee, MakerFee: makerFee}
 		}
 		traderFeeMap[trading] = m
 	}
@@ -266,7 +266,7 @@ func (p *PoloniexApi) TransferFee() (map[string]float64, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse response")
 	}
-	for k,v := range m {
+	for k, v := range m {
 		transferFeeMap[k] = v.TxFee
 	}
 	return transferFeeMap, nil

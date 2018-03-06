@@ -143,14 +143,14 @@ func (b *BitflyerApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 	}
 
 	traderFeeMap := make(map[string]map[string]TradeFee)
-	for trading,v := range b.rateMap {
+	for trading, v := range b.rateMap {
 		m := make(map[string]TradeFee)
-		for settlement,_:= range v {
-			m[settlement] = TradeFee{TakerFee:purchaseFee,MakerFee:purchaseFee}
+		for settlement, _ := range v {
+			m[settlement] = TradeFee{TakerFee: purchaseFee, MakerFee: purchaseFee}
 		}
 		traderFeeMap[trading] = m
 	}
-	return traderFeeMap,nil
+	return traderFeeMap, nil
 }
 
 func (b *BitflyerApi) TransferFee() (map[string]float64, error) {

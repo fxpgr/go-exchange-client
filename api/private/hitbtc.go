@@ -128,7 +128,7 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		if !ok {
 			continue
 		}
-		takeLiquidityRate,err := strconv.ParseFloat(takeLiquidityRateStr,10)
+		takeLiquidityRate, err := strconv.ParseFloat(takeLiquidityRateStr, 10)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse json")
 		}
@@ -136,7 +136,7 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		if !ok {
 			continue
 		}
-		provideLiquidityRate,err := strconv.ParseFloat(provideLiquidityRateStr,10)
+		provideLiquidityRate, err := strconv.ParseFloat(provideLiquidityRateStr, 10)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse json")
 		}
@@ -149,8 +149,8 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 			continue
 		}
 		traderFeeMap[baseCurrency][quoteCurrency] = TradeFee{
-			TakerFee:takeLiquidityRate,
-			MakerFee:provideLiquidityRate,
+			TakerFee: takeLiquidityRate,
+			MakerFee: provideLiquidityRate,
 		}
 	}
 	return traderFeeMap, nil
@@ -177,7 +177,7 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 		if !ok {
 			continue
 		}
-		payoutFee,err := strconv.ParseFloat(payoutFeeStr,10)
+		payoutFee, err := strconv.ParseFloat(payoutFeeStr, 10)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse json")
 		}

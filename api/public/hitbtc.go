@@ -264,7 +264,7 @@ func (h *HitbtcApi) Rate(trading string, settlement string) (float64, error) {
 	}
 }
 
-func (h *HitbtcApi) FrozenCurrency() ([]string,error) {
+func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
 	url := h.publicApiUrl("currency")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {

@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"encoding/json"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
-	"encoding/json"
 )
 
 const (
@@ -213,7 +213,7 @@ func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {
 	}
 }
 
-func (p *PoloniexApi) FrozenCurrency() ([]string,error) {
+func (p *PoloniexApi) FrozenCurrency() ([]string, error) {
 	url := p.publicApiUrl("returnCurrencies")
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
@@ -226,9 +226,9 @@ func (p *PoloniexApi) FrozenCurrency() ([]string,error) {
 	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
 		return nil, errors.Wrap(err, "failed to parse response")
 	}
-	for k,v := range m {
-		if v.Frozen == 1 || v.Delisted == 1 || v.Disabled == 1{
-			frozens = append(frozens,k)
+	for k, v := range m {
+		if v.Frozen == 1 || v.Delisted == 1 || v.Disabled == 1 {
+			frozens = append(frozens, k)
 		}
 	}
 	return frozens, nil
