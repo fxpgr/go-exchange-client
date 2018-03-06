@@ -21,5 +21,10 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(cli3.CurrencyPairs())
-	fmt.Println(cli3.RateMap())
+	rm,err := cli3.RateMap()
+	for trading,v := range rm {
+		for settlement,rate := range v {
+			fmt.Printf("%v %v %v\n",trading,settlement,rate)
+		}
+	}
 }
