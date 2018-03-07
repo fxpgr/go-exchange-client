@@ -39,14 +39,22 @@ func main() {
 }
 ```
 
+## API Documents
+
+- Bitflyer : https://lightning.bitflyer.jp/docs?lang=ja
+- Poloniex : https://poloniex.com/support/api/
+- Hitbtc : https://api.hitbtc.com/
+- Huobi : https://github.com/huobiapi/API_Docs_en/wiki/REST_Reference
+
+
 ## PublicAPI
 
-|          | fetchRate() | Volume() | CurrencyPairs() | Rate() |
-|----------|-------------|----------|-----------------|--------|
-| Bitflyer | Done        | Done     | Done            | Done   |
-| Poloniex | Done        | Done     | Done            | Done   |
-| Hitbtc   | Done        | Done     | Done            | Done   |
-| Huobi    | Done        | Done     | Done            | Done   |
+|          | fetchRate() | Volume() | CurrencyPairs() | Rate() | FrozenCurrency() | Board() |
+|----------|-------------|----------|-----------------|--------|------------------|---------|
+| Bitflyer | Done        | Done     | Done            | Done   | Done             | Done    |
+| Poloniex | Done        | Done     | Done            | Done   | Done             | Done    |
+| Hitbtc   | Done        | Done     | Done            | Done   | Done             | Done    |
+| Huobi    | Done        | Done     | Done            | Done   | Done             | Done    |
 
 ## PrivateAPI
 

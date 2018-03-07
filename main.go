@@ -11,11 +11,13 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(cli.FrozenCurrency())
+	fmt.Println(cli.Board("ETH","BTC"))
 	cli2, err := public.NewClient("poloniex")
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(cli2.FrozenCurrency())
+	/*
 	cli3, err := public.NewClient("huobi")
 	if err != nil {
 		panic(err)
@@ -26,5 +28,5 @@ func main() {
 		for settlement,rate := range v {
 			fmt.Printf("%v %v %v\n",trading,settlement,rate)
 		}
-	}
+	}*/
 }
