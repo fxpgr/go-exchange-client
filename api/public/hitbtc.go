@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"strings"
+	"github.com/antonholmquist/jason"
 )
 
 const (
@@ -299,4 +300,84 @@ func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
 		}
 	}
 	return frozens, nil
+}
+
+
+func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Board,err error) {
+	url := h.publicApiUrl("orderbook/"+trading+settlement)
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	jsonBids,err  := json.GetObjectArray("bid")
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	jsonAsks,err  := json.GetObjectArray("ask")
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	bids := make([]models.BoardOrder,0)
+	asks := make([]models.BoardOrder,0)
+	for _,v := range jsonBids {
+		priceStr,err :=v.GetString("price")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		price,err:= strconv.ParseFloat(priceStr,10)
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		sizeStr,err :=v.GetString("size")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		size,err:= strconv.ParseFloat(sizeStr,10)
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		bids = append(bids, models.BoardOrder{
+			Price:price,
+			Amount:size,
+			Type:models.Bid,
+		})
+	}
+	for _,v := range jsonAsks {
+		priceStr,err :=v.GetString("price")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		price,err:= strconv.ParseFloat(priceStr,10)
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		sizeStr,err :=v.GetString("size")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		size,err:= strconv.ParseFloat(sizeStr,10)
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		asks = append(asks, models.BoardOrder{
+			Price:price,
+			Amount:size,
+			Type:models.Ask,
+		})
+	}
+	board = &models.Board{
+		Bids:bids,
+		Asks:asks,
+	}
+	return board,nil
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
+	"github.com/antonholmquist/jason"
 )
 
 const (
@@ -41,7 +42,6 @@ type BitflyerApi struct {
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
 	rateLastUpdated time.Time
-
 	settlements []string
 
 	m *sync.Mutex
@@ -210,4 +210,68 @@ func (b *BitflyerApi) RateMap() (map[string]map[string]float64, error) {
 
 func (b *BitflyerApi) FrozenCurrency() ([]string, error) {
 	return []string{}, nil
+}
+
+
+func (b *BitflyerApi) Board(trading string, settlement string) (board *models.Board,err error) {
+	url := b.publicApiUrl("board") + "?product_code="+strings.ToUpper(trading) + "_" + strings.ToLower(settlement)
+	resp, err := b.HttpClient.Get(url)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	jsonBids,err  := json.GetObjectArray("bids")
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	jsonAsks,err  := json.GetObjectArray("asks")
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to parse json")
+	}
+	bids := make([]models.BoardOrder,0)
+	asks := make([]models.BoardOrder,0)
+	for _,v := range jsonBids {
+		price,err :=v.GetFloat64("price")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		size,err :=v.GetFloat64("size")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		bids = append(bids, models.BoardOrder{
+			Price:price,
+			Amount:size,
+			Type:models.Bid,
+		})
+	}
+	for _,v := range jsonAsks {
+		price,err :=v.GetFloat64("price")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse price")
+		}
+		size,err :=v.GetFloat64("size")
+		if err != nil {
+			return nil,errors.Wrapf(err, "failed to parse size")
+		}
+		asks = append(asks, models.BoardOrder{
+			Price:price,
+			Amount:size,
+			Type:models.Ask,
+		})
+	}
+	board = &models.Board{
+		Bids:bids,
+		Asks:asks,
+	}
+	return board,nil
 }
