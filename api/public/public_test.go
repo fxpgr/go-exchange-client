@@ -84,12 +84,16 @@ func newTestHuobiPublicClient(rt http.RoundTripper) PublicClient {
 	n["BTC"] = 0.1
 	m := make(map[string]map[string]float64)
 	m["ETH"] = n
+	l := make(map[string]float64)
+	l["BTC"] = 0.1
+	k := make(map[string]map[string]float64)
+	k["ETH"] = l
 	api := &HuobiApi{
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        &http.Client{Transport: rt},
 		rateMap:           m,
-		volumeMap:         m,
+		volumeMap:         k,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		m:                 new(sync.Mutex),
 	}
@@ -405,7 +409,7 @@ func TestHuobiVolume(t *testing.T) {
 		panic(err)
 	}
 	if volume != 2618.88446624714923301081175 {
-		t.Errorf("HitbtcPublicApi: Expected %v. Got %v", 2618.88446624714923301081175, volume)
+		t.Errorf("HuobiPublicApi: Expected %v. Got %v", 2618.88446624714923301081175, volume)
 	}
 }
 

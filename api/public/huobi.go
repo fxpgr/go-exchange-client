@@ -131,8 +131,6 @@ func (h *HuobiApi) fetchRate() error {
 		close(ch)
 	}()
 
-	h.rateMap = make(map[string]map[string]float64)
-	h.volumeMap = make(map[string]map[string]float64)
 	for r := range ch {
 		if r.err != nil {
 			continue
@@ -149,17 +147,17 @@ func (h *HuobiApi) fetchRate() error {
 		if err != nil {
 			continue
 		}
-		m, ok := h.volumeMap[r.Trading]
+		n, ok := h.volumeMap[r.Trading]
 		if !ok {
-			m = make(map[string]float64)
-			h.volumeMap[r.Trading] = m
+			n = make(map[string]float64)
+			h.volumeMap[r.Trading] = n
 		}
-		m[r.Settlement] = volume
+		n[r.Settlement] = volume
 		close, err := tick.GetFloat64("close")
 		if err != nil {
 			continue
 		}
-		m, ok = h.rateMap[r.Trading]
+		m, ok := h.rateMap[r.Trading]
 		if !ok {
 			m = make(map[string]float64)
 			h.rateMap[r.Trading] = m

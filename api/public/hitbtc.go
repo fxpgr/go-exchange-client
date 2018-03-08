@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"fmt"
 	"github.com/Jeffail/gabs"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
@@ -230,7 +229,6 @@ func (h *HitbtcApi) Volume(trading string, settlement string) (float64, error) {
 		}
 		h.rateLastUpdated = now
 	}
-	fmt.Println(h.rateMap)
 	if m, ok := h.volumeMap[trading]; !ok {
 		return 0, errors.Errorf("%s/%s", trading, settlement)
 	} else if volume, ok := m[settlement]; !ok {
