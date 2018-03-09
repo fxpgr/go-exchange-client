@@ -12,11 +12,11 @@ func main() {
 	}
 	fmt.Println(cli.FrozenCurrency())
 	fmt.Println(cli.Board("ETH","BTC"))
-	cli2, err := public.NewClient("poloniex")
+	cli2, err := public.NewClient("huobi")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(cli2.FrozenCurrency())
+	fmt.Println(cli2.Rate("ETH","BTC"))
 	/*
 	cli3, err := public.NewClient("huobi")
 	if err != nil {

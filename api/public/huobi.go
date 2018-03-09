@@ -17,9 +17,6 @@ const (
 	HUOBI_BASE_URL = "https://api.huobi.pro"
 )
 
-type HuobiApiConfig struct {
-}
-
 func NewHuobiPublicApi() (*HuobiApi, error) {
 	api := &HuobiApi{
 		BaseURL:           HUOBI_BASE_URL,
@@ -27,9 +24,15 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		CurrencyPairsCacheDuration: 7*24 * time.Hour,
+		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+
 		HttpClient:        &http.Client{},
+		rt: &http.Transport{},
 
 		m: new(sync.Mutex),
+		rateM: new(sync.Mutex),
+		currencyM: new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil
@@ -38,16 +41,21 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 type HuobiApi struct {
 	BaseURL           string
 	RateCacheDuration time.Duration
+	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
 	currencyPairs     []models.CurrencyPair
-	rateLastUpdated   time.Time
+	CurrencyPairsCacheDuration time.Duration
+	currencyPairsLastUpdated   time.Time
+
 	HttpClient        *http.Client
+	rt http.RoundTripper
 
 	settlements []string
 
 	m *sync.Mutex
-	c *HuobiApiConfig
+	rateM *sync.Mutex
+	currencyM *sync.Mutex
 }
 
 func (h *HuobiApi) publicApiUrl(command string) string {
@@ -69,16 +77,16 @@ func (h *HuobiApi) fetchSettlements() error {
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
+		return errors.Wrapf(err, "failed to parse json: jason err")
 	}
 	data, err := json.GetObjectArray("data")
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
+		return errors.Wrapf(err, "failed to parse json: data")
 	}
 	for _, v := range data {
 		settlement, err := v.GetString("quote-currency")
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse json")
+			return errors.Wrapf(err, "failed to parse json: quote-currency")
 		}
 		settlements = append(settlements, settlement)
 	}
@@ -102,6 +110,9 @@ type HuobiTickResponse struct {
 }
 
 func (h *HuobiApi) fetchRate() error {
+	rateMap := make(map[string]map[string]float64)
+	volumeMap := make(map[string]map[string]float64)
+
 	currencyPairs, err := h.CurrencyPairs()
 	if err != nil {
 		return err
@@ -115,7 +126,8 @@ func (h *HuobiApi) fetchRate() error {
 		go func(trading string, settlement string) {
 			defer wg.Done()
 			url := h.publicApiUrl("/market/detail/merged?symbol=" + strings.ToLower(trading) + strings.ToLower(settlement))
-			resp, err := h.HttpClient.Get(url)
+			cli := &http.Client{Transport:h.rt}
+			resp, err := cli.Get(url)
 			if err != nil {
 				ch <- &HuobiTickResponse{nil, trading, settlement, err}
 				return
@@ -147,23 +159,27 @@ func (h *HuobiApi) fetchRate() error {
 		if err != nil {
 			continue
 		}
-		n, ok := h.volumeMap[r.Trading]
+		h.rateM.Lock()
+		n, ok := volumeMap[r.Trading]
 		if !ok {
 			n = make(map[string]float64)
-			h.volumeMap[r.Trading] = n
+			volumeMap[r.Trading] = n
 		}
 		n[r.Settlement] = volume
 		close, err := tick.GetFloat64("close")
 		if err != nil {
 			continue
 		}
-		m, ok := h.rateMap[r.Trading]
+		m, ok := rateMap[r.Trading]
 		if !ok {
 			m = make(map[string]float64)
-			h.rateMap[r.Trading] = m
+			rateMap[r.Trading] = m
 		}
 		m[r.Settlement] = close
+		h.rateM.Unlock()
 	}
+	h.rateMap = rateMap
+	h.volumeMap = volumeMap
 	return nil
 }
 
@@ -182,10 +198,11 @@ func (h *HuobiApi) RateMap() (map[string]map[string]float64, error) {
 }
 
 func (h *HuobiApi) CurrencyPairs() ([]models.CurrencyPair, error) {
-	if h.currencyPairs != nil {
-		return h.currencyPairs, nil
+	h.currencyM.Lock()
+	defer h.currencyM.Unlock()
+	if len(h.currencyPairs) != 0 {
+		return h.currencyPairs,nil
 	}
-
 	url := h.publicApiUrl("/v1/common/symbols")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
