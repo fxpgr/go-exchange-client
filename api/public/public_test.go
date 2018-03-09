@@ -250,7 +250,6 @@ func TestPoloniexBoard(t *testing.T) {
 }
 
 func TestHitbtcRate(t *testing.T) {
-	
 	jsonSymbol := `[
 	{
 		"id": "ETHBTC",
@@ -288,7 +287,6 @@ func TestHitbtcRate(t *testing.T) {
 }
 
 func TestHitbtcVolume(t *testing.T) {
-	
 	jsonSymbol := `[
 	{
 		"id": "ETHBTC",
@@ -394,7 +392,6 @@ func TestHuobiRate(t *testing.T) {
 }
 
 func TestHuobiVolume(t *testing.T) {
-	
 	jsonSymbol := `{"status":"ok","data":[{"base-currency":"nas","quote-currency":"eth","price-precision":6,"amount-precision":4,"symbol-partition":"innovation"},{"base-currency":"eos","quote-currency":"eth","price-precision":8,"amount-precision":2,"symbol-partition":"main"},{"base-currency":"swftc","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"zec","quote-currency":"usdt","price-precision":2,"amount-precision":4,"symbol-partition":"main"},{"base-currency":"evx","quote-currency":"btc","price-precision":8,"amount-precision":2,"symbol-partition":"innovation"},{"base-currency":"mds","quote-currency":"eth","price-precision":8,"amount-precision":0,"symbol-partition":"innovation"}]}`
 	jsonTicker := `{"status":"ok","ch":"market.naseth.detail.merged","ts":1520335882838,"tick":{"amount":285754.506381807669901550,"open":0.009318000000000000,"close":0.008959000000000000,"high":0.009385000000000000,"id":3404226217,"count":7073,"low":0.008800000000000000,"version":3404226217,"ask":[0.009001000000000000,74.000000000000000000],"vol":2618.884466247149233010811750000000000000,"bid":[0.008888000000000000,57.917400000000000000]}}`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
@@ -420,6 +417,19 @@ func TestHuobiCurrencyPairs(t *testing.T) {
 		panic(err)
 	}
 	for _, _ = range pairs {
+	}
+}
+
+func TestHuobiFrozenCurrency(t *testing.T) {
+	jsonSymbol := `{"status":"ok","data":[{"name":"ela","display-name":"ELA","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"0.1","withdraw-min-amount":"0.2","show-precision":"8","weight":"4995","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":true,"withdraw-enabled":true,"currency-addr-with-tag":false,"fast-confirms":16,"safe-confirms":16},{"name":"bcx","display-name":"BCX","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"1","withdraw-min-amount":"2","show-precision":"4","weight":"3000","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":false,"withdraw-enabled":false,"currency-addr-with-tag":false,"fast-confirms":6,"safe-confirms":6},{"name":"sbtc","display-name":"SBTC","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"0.001","withdraw-min-amount":"0.001","show-precision":"4","weight":"2999","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":false,"withdraw-enabled":false,"currency-addr-with-tag":false,"fast-confirms":6,"safe-confirms":6},{"name":"etf","display-name":"ETF","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"1","withdraw-min-amount":"1","show-precision":"8","weight":"2998","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":false,"withdraw-enabled":false,"currency-addr-with-tag":false,"fast-confirms":6,"safe-confirms":6},{"name":"abt","display-name":"ABT","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"2","withdraw-min-amount":"4","show-precision":"8","weight":"2989","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":true,"withdraw-enabled":true,"currency-addr-with-tag":false,"fast-confirms":15,"safe-confirms":30},{"name":"ont","display-name":"ONT","withdraw-precision":8,"currency-type":"eth","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"0.02","withdraw-min-amount":"0.04","show-precision":"8","weight":"2988","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":true,"withdraw-enabled":false,"currency-addr-with-tag":false,"fast-confirms":1,"safe-confirms":1},{"name":"bt1","display-name":"BT1","withdraw-precision":8,"currency-type":"btc","currency-partition":"pro","otc-enable":0,"deposit-min-amount":"0.01","withdraw-min-amount":"0.01","show-precision":"4","weight":"1","visible":true,"deposit-desc":"","withdraw-desc":"","deposit-enabled":false,"withdraw-enabled":false,"currency-addr-with-tag":false,"fast-confirms":6,"safe-confirms":6}]}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestHuobiPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonSymbol
+	currencies, err := client.FrozenCurrency()
+	if err != nil {
+		panic(err)
+	}
+	for _, _ = range currencies {
 	}
 }
 

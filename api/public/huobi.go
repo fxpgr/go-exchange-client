@@ -290,14 +290,53 @@ func (h *HuobiApi) Rate(trading string, settlement string) (float64, error) {
 
 func (h *HuobiApi) FrozenCurrency() ([]string, error) {
 	var frozens []string
-	return frozens, nil
+	args :=url2.Values{}
+	args.Add("language","en-US")
+	url := h.publicApiUrl("/v1/settings/currencys?")+args.Encode()
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	data, err := json.GetObjectArray("data")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	for _, v := range data {
+		withdrawEnabled, err := v.GetBoolean("withdraw-enabled")
+		if err != nil {
+			continue
+		}
+		depositEnabled, err := v.GetBoolean("deposit-enabled")
+		if err != nil {
+			continue
+		}
+		if withdrawEnabled && depositEnabled {
+			continue
+		}
+		currencyName, err := v.GetString("display-name")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse quote")
+		}
+		frozens = append(frozens,currencyName)
+	}
+	return frozens,nil
 }
 
 func (h *HuobiApi) Board(trading string, settlement string) (board *models.Board,err error) {
 	args :=url2.Values{}
 	args.Add("symbol",strings.ToLower(trading)+strings.ToLower(settlement))
 	args.Add("type","step0")
-	url := h.publicApiUrl("/market/depth")+args.Encode()
+	url := h.publicApiUrl("/market/depth?")+args.Encode()
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return nil,errors.Wrapf(err, "failed to fetch %s", url)
