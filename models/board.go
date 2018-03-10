@@ -16,7 +16,7 @@ type Board struct {
 	Bids []BoardOrder
 }
 
-func (b *Board) BestBuyPrice(amount float64)(float64,error) {
+func (b *Board) BestBuyPrice()(float64,error) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price < b.Bids[j].Price
 	})
@@ -26,7 +26,7 @@ func (b *Board) BestBuyPrice(amount float64)(float64,error) {
 	return b.Bids[0].Price,nil
 }
 
-func (b *Board) BestSellPrice(amount float64)(float64,error) {
+func (b *Board) BestSellPrice()(float64,error) {
 	sort.Slice(b.Asks, func(i, j int) bool {
 		return b.Asks[i].Price < b.Asks[j].Price
 	})
