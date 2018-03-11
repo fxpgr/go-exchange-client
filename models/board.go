@@ -18,7 +18,7 @@ type Board struct {
 
 func (b *Board) BestBuyPrice()(float64,error) {
 	sort.Slice(b.Bids, func(i, j int) bool {
-		return b.Bids[i].Price < b.Bids[j].Price
+		return b.Bids[i].Price > b.Bids[j].Price
 	})
 	if len(b.Bids) == 0 {
 		return 0,errors.New("there is no bids")
