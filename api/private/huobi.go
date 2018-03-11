@@ -150,17 +150,17 @@ func (h *HuobiApi) TransferFee() (map[string]float64, error) {
 		go func(currency string) {
 			defer wg.Done()
 			args := url.Values{}
-			args.Add("currency", strings.ToLower(c))
+			args.Add("currency", strings.ToLower(currency))
 			url := h.BaseURL + "/v1/dw/withdraw-virtual/fee-range?" + args.Encode()
 			cli := &http.Client{Transport: h.rt}
 			resp, err := cli.Get(url)
 			if err != nil {
-				ch <- &HuobiTransferFeeResponse{nil, c, err}
+				ch <- &HuobiTransferFeeResponse{nil, currency, err}
 				return
 			}
 			defer resp.Body.Close()
 			byteArray, err := ioutil.ReadAll(resp.Body)
-			ch <- &HuobiTransferFeeResponse{byteArray, c, err}
+			ch <- &HuobiTransferFeeResponse{byteArray, currency, err}
 			<-workers
 		}(c)
 	}
