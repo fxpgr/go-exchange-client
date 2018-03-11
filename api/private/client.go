@@ -13,9 +13,8 @@ type TradeFee struct {
 
 //go:generate mockery -name=PrivateClient
 type PrivateClient interface {
-	TradeFeeRate() (map[string]map[string]TradeFee, error)
 	TransferFee() (map[string]float64, error)
-
+	TradeFeeRate() (map[string]map[string]TradeFee, error)
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
@@ -35,6 +34,8 @@ func NewClient(exchangeName string, apikey string, seckey string) (PrivateClient
 		return NewPoloniexApi(apikey, seckey)
 	case "hitbtc":
 		return NewHitbtcApi(apikey, seckey)
+	case "huobi":
+		return NewHuobiApi(apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }

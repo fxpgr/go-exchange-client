@@ -148,10 +148,12 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		if !ok {
 			continue
 		}
-		traderFeeMap[baseCurrency][quoteCurrency] = TradeFee{
+		n := make(map[string]TradeFee)
+		n[quoteCurrency] = TradeFee{
 			TakerFee: takeLiquidityRate,
 			MakerFee: provideLiquidityRate,
 		}
+		traderFeeMap[baseCurrency] = n
 	}
 	return traderFeeMap, nil
 }
