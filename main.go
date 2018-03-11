@@ -8,17 +8,17 @@ import (
 )
 
 func main() {
-	bitflyerPublicApi, err := public.NewClient("bitflyer")
+	cli, err := public.NewClient("bitflyer")
 	if err != nil {
 		panic(err)
 	}
-	currencyPairs, err := bitflyerPublicApi.CurrencyPairs()
+	currencyPairs, err := cli.CurrencyPairs()
 	if err != nil {
 		panic(err)
 	}
 	for _, v := range currencyPairs {
-		fmt.Println(bitflyerPublicApi.Rate(v.Trading, v.Settlement))
-		fmt.Println(bitflyerPublicApi.Volume(v.Trading, v.Settlement))
+		fmt.Println(cli.Rate(v.Trading, v.Settlement))
+		fmt.Println(cli.Volume(v.Trading, v.Settlement))
 	}
 
 	bitflyerPrivateApi, err := private.NewClient("bitflyer", "APIKEY", "SECRETKEY")
