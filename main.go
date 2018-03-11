@@ -20,8 +20,10 @@ func main() {
 		fmt.Println(cli.Rate(v.Trading, v.Settlement))
 		fmt.Println(cli.Volume(v.Trading, v.Settlement))
 	}
-
-	bitflyerPrivateApi, err := private.NewClient("bitflyer", "APIKEY", "SECRETKEY")
-	bitflyerPrivateApi.Balances()
-	bitflyerPrivateApi.Order("BTC", "USDT", models.Bid, 10000.0, 1)
+	cli2, err := private.NewClient("bitflyer", "APIKEY", "SECRETKEY")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(cli2.Balances())
+	fmt.Println(cli2.Order("BTC", "USDT", models.Bid, 10000.0, 1))
 }
