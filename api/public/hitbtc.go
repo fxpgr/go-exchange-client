@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/Jeffail/gabs"
+	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"strings"
-	"github.com/antonholmquist/jason"
 )
 
 const (
@@ -300,82 +300,81 @@ func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
 	return frozens, nil
 }
 
-
-func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Board,err error) {
-	url := h.publicApiUrl("orderbook/"+trading+settlement)
+func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Board, err error) {
+	url := h.publicApiUrl("orderbook/" + trading + settlement)
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	jsonBids,err  := json.GetObjectArray("bid")
+	jsonBids, err := json.GetObjectArray("bid")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	jsonAsks,err  := json.GetObjectArray("ask")
+	jsonAsks, err := json.GetObjectArray("ask")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	bids := make([]models.BoardOrder,0)
-	asks := make([]models.BoardOrder,0)
-	for _,v := range jsonBids {
-		priceStr,err :=v.GetString("price")
+	bids := make([]models.BoardOrder, 0)
+	asks := make([]models.BoardOrder, 0)
+	for _, v := range jsonBids {
+		priceStr, err := v.GetString("price")
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		price,err:= strconv.ParseFloat(priceStr,10)
+		price, err := strconv.ParseFloat(priceStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		sizeStr,err :=v.GetString("size")
+		sizeStr, err := v.GetString("size")
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse size")
+			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		size,err:= strconv.ParseFloat(sizeStr,10)
+		size, err := strconv.ParseFloat(sizeStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse size")
+			return nil, errors.Wrapf(err, "failed to parse size")
 		}
 		bids = append(bids, models.BoardOrder{
-			Price:price,
-			Amount:size,
-			Type:models.Bid,
+			Price:  price,
+			Amount: size,
+			Type:   models.Bid,
 		})
 	}
-	for _,v := range jsonAsks {
-		priceStr,err :=v.GetString("price")
+	for _, v := range jsonAsks {
+		priceStr, err := v.GetString("price")
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		price,err:= strconv.ParseFloat(priceStr,10)
+		price, err := strconv.ParseFloat(priceStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		sizeStr,err :=v.GetString("size")
+		sizeStr, err := v.GetString("size")
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse size")
+			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		size,err:= strconv.ParseFloat(sizeStr,10)
+		size, err := strconv.ParseFloat(sizeStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse size")
+			return nil, errors.Wrapf(err, "failed to parse size")
 		}
 		asks = append(asks, models.BoardOrder{
-			Price:price,
-			Amount:size,
-			Type:models.Ask,
+			Price:  price,
+			Amount: size,
+			Type:   models.Ask,
 		})
 	}
 	board = &models.Board{
-		Bids:bids,
-		Asks:asks,
+		Bids: bids,
+		Asks: asks,
 	}
-	return board,nil
+	return board, nil
 }

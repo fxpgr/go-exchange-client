@@ -51,7 +51,7 @@ func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		rt: &http.Transport{},
+		rt:                &http.Transport{},
 
 		m: new(sync.Mutex),
 	}, nil
@@ -65,7 +65,6 @@ type HuobiApi struct {
 	HttpClient        http.Client
 	rt                *http.Transport
 	settlements       []string
-
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
@@ -93,27 +92,27 @@ func (h *HuobiApi) privateApi(method string, path string, params *url.Values) ([
 }
 
 func (h *HuobiApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
-	cli,err := public.NewClient("huobi")
+	cli, err := public.NewClient("huobi")
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	pairs,err:= cli.CurrencyPairs()
+	pairs, err := cli.CurrencyPairs()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	traderFeeMap := make(map[string]map[string]TradeFee)
-	for _,p := range pairs {
+	for _, p := range pairs {
 		n := make(map[string]TradeFee)
-		n[p.Settlement] = TradeFee{0.2,0.2}
+		n[p.Settlement] = TradeFee{0.2, 0.2}
 		traderFeeMap[p.Trading] = n
 	}
 	return traderFeeMap, nil
 }
 
 type HuobiTransferFeeResponse struct {
-	response   []byte
+	response []byte
 	Currency string
-	err        error
+	err      error
 }
 
 type huobiTransferFeeMap map[string]float64
@@ -121,38 +120,39 @@ type huobiTransferFeeSyncMap struct {
 	huobiTransferFeeMap
 	m *sync.Mutex
 }
-func(sm *huobiTransferFeeSyncMap) Set(currency string, fee float64) {
+
+func (sm *huobiTransferFeeSyncMap) Set(currency string, fee float64) {
 	sm.m.Lock()
 	defer sm.m.Unlock()
 	sm.huobiTransferFeeMap[currency] = fee
 }
-func(sm *huobiTransferFeeSyncMap) GetAll() map[string]float64{
+func (sm *huobiTransferFeeSyncMap) GetAll() map[string]float64 {
 	sm.m.Lock()
 	defer sm.m.Unlock()
 	return sm.huobiTransferFeeMap
 }
 
 func (h *HuobiApi) TransferFee() (map[string]float64, error) {
-	cli,err := public.NewClient("huobi")
+	cli, err := public.NewClient("huobi")
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	currencies, err:= cli.FrozenCurrency()
+	currencies, err := cli.FrozenCurrency()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	ch := make(chan *HuobiTransferFeeResponse, len(currencies))
 	workers := make(chan int, 10)
 	wg := &sync.WaitGroup{}
-	for _,c := range currencies {
+	for _, c := range currencies {
 		wg.Add(1)
 		workers <- 1
 		go func(currency string) {
 			defer wg.Done()
-			args :=url.Values{}
-			args.Add("currency",strings.ToLower(c))
-			url := h.BaseURL+"/v1/dw/withdraw-virtual/fee-range?"+ args.Encode()
-			cli := &http.Client{Transport:h.rt}
+			args := url.Values{}
+			args.Add("currency", strings.ToLower(c))
+			url := h.BaseURL + "/v1/dw/withdraw-virtual/fee-range?" + args.Encode()
+			cli := &http.Client{Transport: h.rt}
 			resp, err := cli.Get(url)
 			if err != nil {
 				ch <- &HuobiTransferFeeResponse{nil, c, err}
@@ -168,7 +168,7 @@ func (h *HuobiApi) TransferFee() (map[string]float64, error) {
 		wg.Wait()
 		close(ch)
 	}()
-	transferMap := huobiTransferFeeSyncMap{make(huobiTransferFeeMap),new(sync.Mutex)}
+	transferMap := huobiTransferFeeSyncMap{make(huobiTransferFeeMap), new(sync.Mutex)}
 	for r := range ch {
 		if r.err != nil {
 			continue
@@ -185,13 +185,13 @@ func (h *HuobiApi) TransferFee() (map[string]float64, error) {
 		if err != nil {
 			continue
 		}
-		transferMap.Set(r.Currency,amount)
+		transferMap.Set(r.Currency, amount)
 	}
-	return transferMap.GetAll(),nil
+	return transferMap.GetAll(), nil
 }
 
 func (h *HuobiApi) Balances() (map[string]float64, error) {
-	byteArray, err	:= h.privateApi("GET","/v1/account/accounts",&url.Values{})
+	byteArray, err := h.privateApi("GET", "/v1/account/accounts", &url.Values{})
 	if err != nil {
 		return nil, err
 	}
@@ -204,15 +204,15 @@ func (h *HuobiApi) Balances() (map[string]float64, error) {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	if len(data) == 0 {
-		return nil,errors.New("there is no available account")
+		return nil, errors.New("there is no available account")
 	}
-	accountId,err:= data[0].GetString("id")
+	accountId, err := data[0].GetString("id")
 	if err != nil {
-		return nil,errors.New("there is no available account")
+		return nil, errors.New("there is no available account")
 	}
 	params := &url.Values{}
 	params.Set("account-id", accountId)
-	byteArray, err	= h.privateApi("GET","/v1/account/accounts/"+accountId+"/balance",params)
+	byteArray, err = h.privateApi("GET", "/v1/account/accounts/"+accountId+"/balance", params)
 	if err != nil {
 		return nil, err
 	}
@@ -250,13 +250,13 @@ func (h *HuobiApi) Balances() (map[string]float64, error) {
 	return m, nil
 }
 
-type HuobiBalance struct{
-	T string
+type HuobiBalance struct {
+	T       string
 	Balance float64
 }
 
 func (h *HuobiApi) getAccountId() (string, error) {
-	byteArray, err	:= h.privateApi("GET","/v1/account/accounts",&url.Values{})
+	byteArray, err := h.privateApi("GET", "/v1/account/accounts", &url.Values{})
 	if err != nil {
 		return "", err
 	}
@@ -269,23 +269,23 @@ func (h *HuobiApi) getAccountId() (string, error) {
 		return "", errors.Wrapf(err, "failed to parse json")
 	}
 	if len(data) == 0 {
-		return "",errors.New("there is no available account")
+		return "", errors.New("there is no available account")
 	}
-	accountId,err:= data[0].GetString("id")
+	accountId, err := data[0].GetString("id")
 	if err != nil {
-		return "",errors.New("there is no available account")
+		return "", errors.New("there is no available account")
 	}
-	return accountId,nil
+	return accountId, nil
 }
 
 func (h *HuobiApi) CompleteBalances() (map[string]*models.Balance, error) {
 	accountId, err := h.getAccountId()
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	params := &url.Values{}
 	params.Set("account-id", accountId)
-	byteArray, err	:= h.privateApi("GET","/v1/account/accounts/"+accountId+"/balance",params)
+	byteArray, err := h.privateApi("GET", "/v1/account/accounts/"+accountId+"/balance", params)
 	if err != nil {
 		return nil, err
 	}
@@ -319,8 +319,8 @@ func (h *HuobiApi) CompleteBalances() (map[string]*models.Balance, error) {
 			return nil, err
 		}
 		if previousCurrency != "" && previousCurrency != currency {
-			m[previousCurrency]=previousBalance
-			previousCurrency =currency
+			m[previousCurrency] = previousBalance
+			previousCurrency = currency
 			previousBalance = &models.Balance{}
 		}
 		if t == "trade" {
@@ -341,29 +341,29 @@ type HuobiActiveOrderResponse struct {
 }
 
 func (h *HuobiApi) ActiveOrders() ([]*models.Order, error) {
-	return nil,errors.New("not implemented")
+	return nil, errors.New("not implemented")
 }
 
 func (h *HuobiApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
 	accountId, err := h.getAccountId()
 	if err != nil {
-		return "",err
+		return "", err
 	}
 	params := &url.Values{}
 	if ordertype == models.Ask {
-		params.Set("type","buy-limit")
+		params.Set("type", "buy-limit")
 	} else if ordertype == models.Bid {
-		params.Set("type","sell-limit")
+		params.Set("type", "sell-limit")
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-	params.Set("symbol",strings.ToLower(fmt.Sprintf("%s%s", trading, settlement)))
-	params.Set("account-id",accountId)
-	amountStr := strconv.FormatFloat(amount,'f',4,64)
-	priceStr := strconv.FormatFloat(price,'f',4,64)
-	params.Set("amount",amountStr)
-	params.Set("price",priceStr)
-	byteArray, err	:= h.privateApi("GET","/v1/order/orders/place",params)
+	params.Set("symbol", strings.ToLower(fmt.Sprintf("%s%s", trading, settlement)))
+	params.Set("account-id", accountId)
+	amountStr := strconv.FormatFloat(amount, 'f', 4, 64)
+	priceStr := strconv.FormatFloat(price, 'f', 4, 64)
+	params.Set("amount", amountStr)
+	params.Set("price", priceStr)
+	byteArray, err := h.privateApi("GET", "/v1/order/orders/place", params)
 	if err != nil {
 		return "", err
 	}
@@ -375,24 +375,24 @@ func (h *HuobiApi) Order(trading string, settlement string, ordertype models.Ord
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse json")
 	}
-	return orderId,nil
+	return orderId, nil
 }
 
 func (h *HuobiApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
 	params := &url.Values{}
-	amountStr := strconv.FormatFloat(amount,'f',4,64)
-	additionalFeeStr := strconv.FormatFloat(additionalFee,'f',4,64)
-	params.Set("address",addr)
-	params.Set("amount",amountStr)
-	params.Set("currency",typ)
-	params.Set("fee",additionalFeeStr)
-	_, err	:= h.privateApi("GET","/v1/dw/withdraw/api/create",params)
+	amountStr := strconv.FormatFloat(amount, 'f', 4, 64)
+	additionalFeeStr := strconv.FormatFloat(additionalFee, 'f', 4, 64)
+	params.Set("address", addr)
+	params.Set("amount", amountStr)
+	params.Set("currency", typ)
+	params.Set("fee", additionalFeeStr)
+	_, err := h.privateApi("GET", "/v1/dw/withdraw/api/create", params)
 	return err
 }
 
 func (h *HuobiApi) CancelOrder(orderNumber string, _ string) error {
 	params := &url.Values{}
-	params.Set("order-id",orderNumber)
+	params.Set("order-id", orderNumber)
 	_, err := h.privateApi("POST", "/v1/order/orders"+orderNumber+"/submitcancel", params)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
@@ -402,7 +402,7 @@ func (h *HuobiApi) CancelOrder(orderNumber string, _ string) error {
 
 func (h *HuobiApi) Address(c string) (string, error) {
 	params := &url.Values{}
-	params.Set("currency",strings.ToLower(c))
+	params.Set("currency", strings.ToLower(c))
 
 	bs, err := h.privateApi("GET", "/v1/dw/deposit-virtual/addresses?", params)
 	if err != nil {

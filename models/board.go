@@ -1,13 +1,13 @@
 package models
 
 import (
-	"sort"
 	"github.com/pkg/errors"
+	"sort"
 )
 
 type BoardOrder struct {
-	Type OrderType
-	Price float64
+	Type   OrderType
+	Price  float64
 	Amount float64
 }
 
@@ -16,62 +16,62 @@ type Board struct {
 	Bids []BoardOrder
 }
 
-func (b *Board) BestBuyPrice()(float64,error) {
+func (b *Board) BestBuyPrice() (float64, error) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price > b.Bids[j].Price
 	})
 	if len(b.Bids) == 0 {
-		return 0,errors.New("there is no bids")
+		return 0, errors.New("there is no bids")
 	}
-	return b.Bids[0].Price,nil
+	return b.Bids[0].Price, nil
 }
 
-func (b *Board) BestSellPrice()(float64,error) {
+func (b *Board) BestSellPrice() (float64, error) {
 	sort.Slice(b.Asks, func(i, j int) bool {
 		return b.Asks[i].Price < b.Asks[j].Price
 	})
 	if len(b.Asks) == 0 {
-		return 0,errors.New("there is no bids")
+		return 0, errors.New("there is no bids")
 	}
-	return b.Asks[0].Price,nil
+	return b.Asks[0].Price, nil
 }
 
-func (b *Board) AverageBuyRate(amount float64)(float64,error) {
+func (b *Board) AverageBuyRate(amount float64) (float64, error) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price < b.Bids[j].Price
 	})
 	if len(b.Bids) == 0 {
-		return 0,errors.New("there is no bids")
+		return 0, errors.New("there is no bids")
 	}
 	var sum float64
 	remainingAmount := amount
-	for _,v := range b.Bids {
+	for _, v := range b.Bids {
 		if v.Amount > remainingAmount {
 			sum += remainingAmount * v.Price
-			return sum/amount,nil
+			return sum / amount, nil
 		} else {
-			sum += v.Amount *v.Price
+			sum += v.Amount * v.Price
 			remainingAmount = remainingAmount - v.Amount
 		}
 	}
 	return 0, errors.New("there is not enough board orders")
 }
 
-func (b *Board) AverageSellRate(amount float64)(float64,error) {
+func (b *Board) AverageSellRate(amount float64) (float64, error) {
 	sort.Slice(b.Asks, func(i, j int) bool {
 		return b.Asks[i].Price < b.Asks[j].Price
 	})
 	if len(b.Asks) == 0 {
-		return 0,errors.New("there is no asks")
+		return 0, errors.New("there is no asks")
 	}
 	var sum float64
 	remainingAmount := amount
-	for _,v := range b.Asks {
+	for _, v := range b.Asks {
 		if v.Amount > remainingAmount {
 			sum += remainingAmount * v.Price
-			return sum/amount,nil
+			return sum / amount, nil
 		} else {
-			sum += v.Amount *v.Price
+			sum += v.Amount * v.Price
 			remainingAmount = remainingAmount - v.Amount
 		}
 	}

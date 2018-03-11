@@ -1,14 +1,14 @@
 package private
 
 import (
-	"github.com/pkg/errors"
-	"strings"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"io/ioutil"
 	"fmt"
+	"github.com/pkg/errors"
+	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 func parseCurrencyPair(s string) (string, string, error) {
@@ -42,7 +42,6 @@ type transferResponse struct {
 type cancelOrderResponse struct {
 	Success int `json:"success"`
 }
-
 
 func GetParamHmacSHA256Base64Sign(secret, params string) (string, error) {
 	mac := hmac.New(sha256.New, []byte(secret))

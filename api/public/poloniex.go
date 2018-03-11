@@ -12,8 +12,8 @@ import (
 	"github.com/fxpgr/go-ccex-api-client/logger"
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
-	url2 "net/url"
 	"io/ioutil"
+	url2 "net/url"
 )
 
 const (
@@ -249,8 +249,8 @@ type Currency struct {
 
 func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, error) {
 	args := url2.Values{}
-	args.Add("currencyPair",settlement+"_"+trading)
-	url := p.publicApiUrl("returnOrderBook")+"?"+ args.Encode()
+	args.Add("currencyPair", settlement+"_"+trading)
+	url := p.publicApiUrl("returnOrderBook") + "?" + args.Encode()
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
@@ -258,72 +258,72 @@ func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, e
 	defer resp.Body.Close()
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	jsonBids,err  := json.GetValueArray("bids")
+	jsonBids, err := json.GetValueArray("bids")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	jsonAsks,err  := json.GetValueArray("asks")
+	jsonAsks, err := json.GetValueArray("asks")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	bids := make([]models.BoardOrder,0)
-	asks := make([]models.BoardOrder,0)
-	for _,v := range jsonBids {
-		s, err:= v.Array()
+	bids := make([]models.BoardOrder, 0)
+	asks := make([]models.BoardOrder, 0)
+	for _, v := range jsonBids {
+		s, err := v.Array()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse array")
+			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		priceStr,err:= s[0].String()
+		priceStr, err := s[0].String()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		price,err := strconv.ParseFloat(priceStr,10)
+		price, err := strconv.ParseFloat(priceStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		amount,err := s[1].Float64()
+		amount, err := s[1].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
 		bids = append(bids, models.BoardOrder{
-			Price:price,
-			Amount:amount,
-			Type:models.Bid,
+			Price:  price,
+			Amount: amount,
+			Type:   models.Bid,
 		})
 	}
-	for _,v := range jsonAsks {
-		s, err:= v.Array()
+	for _, v := range jsonAsks {
+		s, err := v.Array()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse array")
+			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		priceStr,err:= s[0].String()
+		priceStr, err := s[0].String()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		price,err := strconv.ParseFloat(priceStr,10)
+		price, err := strconv.ParseFloat(priceStr, 10)
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		amount,err := s[1].Float64()
+		amount, err := s[1].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
 		asks = append(asks, models.BoardOrder{
-			Price:price,
-			Amount:amount,
-			Type:models.Ask,
+			Price:  price,
+			Amount: amount,
+			Type:   models.Ask,
 		})
 	}
 
 	board := &models.Board{
-		Bids:bids,
-		Asks:asks,
+		Bids: bids,
+		Asks: asks,
 	}
 	return board, nil
 }

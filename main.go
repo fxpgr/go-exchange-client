@@ -10,7 +10,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	board,err := cli3.Board("WAX","ETH")
+	board, err := cli3.Board("WAX", "ETH")
 	fmt.Println(board.Bids)
 	fmt.Println(board.AverageBuyRate(1600000))
 

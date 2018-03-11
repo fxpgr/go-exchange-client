@@ -9,8 +9,8 @@ import (
 	"github.com/fxpgr/go-ccex-api-client/models"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"strings"
 	url2 "net/url"
+	"strings"
 )
 
 const (
@@ -19,19 +19,19 @@ const (
 
 func NewHuobiPublicApi() (*HuobiApi, error) {
 	api := &HuobiApi{
-		BaseURL:           HUOBI_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-		rateMap:           nil,
-		volumeMap:         nil,
-		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		CurrencyPairsCacheDuration: 7*24 * time.Hour,
+		BaseURL:                    HUOBI_BASE_URL,
+		RateCacheDuration:          30 * time.Second,
+		rateMap:                    nil,
+		volumeMap:                  nil,
+		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
-		HttpClient:        &http.Client{},
-		rt: &http.Transport{},
+		HttpClient: &http.Client{},
+		rt:         &http.Transport{},
 
-		m: new(sync.Mutex),
-		rateM: new(sync.Mutex),
+		m:         new(sync.Mutex),
+		rateM:     new(sync.Mutex),
 		currencyM: new(sync.Mutex),
 	}
 	api.fetchSettlements()
@@ -39,22 +39,22 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 }
 
 type HuobiApi struct {
-	BaseURL           string
-	RateCacheDuration time.Duration
-	rateLastUpdated   time.Time
-	volumeMap         map[string]map[string]float64
-	rateMap           map[string]map[string]float64
-	currencyPairs     []models.CurrencyPair
+	BaseURL                    string
+	RateCacheDuration          time.Duration
+	rateLastUpdated            time.Time
+	volumeMap                  map[string]map[string]float64
+	rateMap                    map[string]map[string]float64
+	currencyPairs              []models.CurrencyPair
 	CurrencyPairsCacheDuration time.Duration
 	currencyPairsLastUpdated   time.Time
 
-	HttpClient        *http.Client
-	rt http.RoundTripper
+	HttpClient *http.Client
+	rt         http.RoundTripper
 
 	settlements []string
 
-	m *sync.Mutex
-	rateM *sync.Mutex
+	m         *sync.Mutex
+	rateM     *sync.Mutex
 	currencyM *sync.Mutex
 }
 
@@ -126,7 +126,7 @@ func (h *HuobiApi) fetchRate() error {
 		go func(trading string, settlement string) {
 			defer wg.Done()
 			url := h.publicApiUrl("/market/detail/merged?symbol=" + strings.ToLower(trading) + strings.ToLower(settlement))
-			cli := &http.Client{Transport:h.rt}
+			cli := &http.Client{Transport: h.rt}
 			resp, err := cli.Get(url)
 			if err != nil {
 				ch <- &HuobiTickResponse{nil, trading, settlement, err}
@@ -201,7 +201,7 @@ func (h *HuobiApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	h.currencyM.Lock()
 	defer h.currencyM.Unlock()
 	if len(h.currencyPairs) != 0 {
-		return h.currencyPairs,nil
+		return h.currencyPairs, nil
 	}
 	url := h.publicApiUrl("/v1/common/symbols")
 	resp, err := h.HttpClient.Get(url)
@@ -290,18 +290,18 @@ func (h *HuobiApi) Rate(trading string, settlement string) (float64, error) {
 
 func (h *HuobiApi) FrozenCurrency() ([]string, error) {
 	var frozens []string
-	args :=url2.Values{}
-	args.Add("language","en-US")
-	url := h.publicApiUrl("/v1/settings/currencys?")+args.Encode()
+	args := url2.Values{}
+	args.Add("language", "en-US")
+	url := h.publicApiUrl("/v1/settings/currencys?") + args.Encode()
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
@@ -327,85 +327,85 @@ func (h *HuobiApi) FrozenCurrency() ([]string, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse quote")
 		}
-		frozens = append(frozens,currencyName)
+		frozens = append(frozens, currencyName)
 	}
-	return frozens,nil
+	return frozens, nil
 }
 
-func (h *HuobiApi) Board(trading string, settlement string) (board *models.Board,err error) {
-	args :=url2.Values{}
-	args.Add("symbol",strings.ToLower(trading)+strings.ToLower(settlement))
-	args.Add("type","step0")
-	url := h.publicApiUrl("/market/depth?")+args.Encode()
+func (h *HuobiApi) Board(trading string, settlement string) (board *models.Board, err error) {
+	args := url2.Values{}
+	args.Add("symbol", strings.ToLower(trading)+strings.ToLower(settlement))
+	args.Add("type", "step0")
+	url := h.publicApiUrl("/market/depth?") + args.Encode()
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json from byte array")
+		return nil, errors.Wrapf(err, "failed to parse json from byte array")
 	}
-	tick,err := json.GetObject("tick")
+	tick, err := json.GetObject("tick")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json by key tick")
+		return nil, errors.Wrapf(err, "failed to parse json by key tick")
 	}
-	jsonBids,err  := tick.GetValueArray("bids")
+	jsonBids, err := tick.GetValueArray("bids")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json bids")
+		return nil, errors.Wrapf(err, "failed to parse json bids")
 	}
-	jsonAsks,err  := tick.GetValueArray("asks")
+	jsonAsks, err := tick.GetValueArray("asks")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json asks")
+		return nil, errors.Wrapf(err, "failed to parse json asks")
 	}
-	bids := make([]models.BoardOrder,0)
-	asks := make([]models.BoardOrder,0)
-	for _,v := range jsonBids {
-		s, err:= v.Array()
+	bids := make([]models.BoardOrder, 0)
+	asks := make([]models.BoardOrder, 0)
+	for _, v := range jsonBids {
+		s, err := v.Array()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse array")
+			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		price,err:= s[0].Float64()
+		price, err := s[0].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		amount,err:= s[1].Float64()
+		amount, err := s[1].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse amount")
+			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
 		bids = append(bids, models.BoardOrder{
-			Price:price,
-			Amount:amount,
-			Type:models.Bid,
+			Price:  price,
+			Amount: amount,
+			Type:   models.Bid,
 		})
 	}
-	for _,v := range jsonAsks {
-		s, err:= v.Array()
+	for _, v := range jsonAsks {
+		s, err := v.Array()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse array")
+			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		price,err:= s[0].Float64()
+		price, err := s[0].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse price")
+			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		amount,err:= s[1].Float64()
+		amount, err := s[1].Float64()
 		if err != nil {
-			return nil,errors.Wrapf(err, "failed to parse amount")
+			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
 		asks = append(asks, models.BoardOrder{
-			Price:price,
-			Amount:amount,
-			Type:models.Ask,
+			Price:  price,
+			Amount: amount,
+			Type:   models.Ask,
 		})
 	}
 	board = &models.Board{
-		Bids:bids,
-		Asks:asks,
+		Bids: bids,
+		Asks: asks,
 	}
-	return board,nil
+	return board, nil
 }
