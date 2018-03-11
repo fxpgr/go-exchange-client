@@ -191,7 +191,13 @@ func (h *HuobiApi) TransferFee() (map[string]float64, error) {
 }
 
 func (h *HuobiApi) Balances() (map[string]float64, error) {
-	byteArray, err := h.privateApi("GET", "/v1/account/accounts", &url.Values{})
+	accountId, err := h.getAccountId()
+	if err != nil {
+		return nil, err
+	}
+	params := &url.Values{}
+	params.Set("account-id", accountId)
+	byteArray, err := h.privateApi("GET", "/v1/account/accounts/"+accountId+"/balance", params)
 	if err != nil {
 		return nil, err
 	}
@@ -199,30 +205,13 @@ func (h *HuobiApi) Balances() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	data, err := json.GetObjectArray("data")
+	data, err := json.GetObject("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json key data")
 	}
-	if len(data) == 0 {
-		return nil, errors.New("there is no available account")
-	}
-	accountId, err := data[0].GetString("id")
+	balances, err := data.GetObjectArray("list")
 	if err != nil {
-		return nil, errors.New("there is no available account")
-	}
-	params := &url.Values{}
-	params.Set("account-id", accountId)
-	byteArray, err = h.privateApi("GET", "/v1/account/accounts/"+accountId+"/balance", params)
-	if err != nil {
-		return nil, err
-	}
-	json, err = jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	balances, err := json.GetObjectArray("list")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json key list")
 	}
 	m := make(map[string]float64)
 	for _, v := range balances {
@@ -262,19 +251,20 @@ func (h *HuobiApi) getAccountId() (string, error) {
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json")
+		return "", errors.Wrapf(err, "failed to parse json: raw data")
 	}
 	data, err := json.GetObjectArray("data")
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json")
+		return "", errors.Wrapf(err, "failed to parse json: key data")
 	}
 	if len(data) == 0 {
-		return "", errors.New("there is no available account")
+		return "", errors.New("there is no data")
 	}
-	accountId, err := data[0].GetString("id")
+	accountIdInt, err := data[0].GetInt64("id")
 	if err != nil {
 		return "", errors.New("there is no available account")
 	}
+	accountId := strconv.Itoa(int(accountIdInt))
 	return accountId, nil
 }
 
@@ -293,13 +283,17 @@ func (h *HuobiApi) CompleteBalances() (map[string]*models.Balance, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	balances, err := json.GetObjectArray("list")
+	data, err := json.GetObject("data")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data")
+	}
+	balances, err := data.GetObjectArray("list")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	m := make(map[string]*models.Balance)
 	var previousCurrency string
-	var previousBalance *models.Balance
+	previousBalance := &models.Balance{}
 	var available float64
 	for _, v := range balances {
 		currency, err := v.GetString("currency")
@@ -393,18 +387,44 @@ func (h *HuobiApi) Transfer(typ string, addr string, amount float64, additionalF
 func (h *HuobiApi) CancelOrder(orderNumber string, _ string) error {
 	params := &url.Values{}
 	params.Set("order-id", orderNumber)
-	_, err := h.privateApi("POST", "/v1/order/orders"+orderNumber+"/submitcancel", params)
+	_, err := h.privateApi("POST", "/v1/order/orders/"+orderNumber+"/submitcancel", params)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
 	}
 	return nil
 }
 
+func (h *HuobiApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+	params := &url.Values{}
+	params.Set("order-id", orderNumber)
+	bs, err := h.privateApi("POST", "/v1/order/orders/"+orderNumber, params)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to cancel order")
+	}
+	json, err := jason.NewObjectFromBytes(bs)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to parse json")
+	}
+	data, err := json.GetObject("data")
+	if err != nil {
+		return false, err
+	}
+	status, err := data.GetString("state")
+	if err != nil {
+		return false, err
+	}
+	if status == "filled" {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (h *HuobiApi) Address(c string) (string, error) {
 	params := &url.Values{}
 	params.Set("currency", strings.ToLower(c))
+	params.Set("type", "deposit")
 
-	bs, err := h.privateApi("GET", "/v1/dw/deposit-virtual/addresses?", params)
+	bs, err := h.privateApi("GET", "/v1/dw/deposit-virtual/addresses", params)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to fetch deposit address")
 	}
@@ -412,6 +432,7 @@ func (h *HuobiApi) Address(c string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to parse json")
 	}
+	fmt.Println(json)
 	address, err := json.GetString("data")
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to take address of %s", c)

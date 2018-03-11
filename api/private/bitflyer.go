@@ -243,6 +243,19 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return completebalancemap, nil
 }
 
+func (b *BitflyerApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+	orders, err := b.ActiveOrders()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to get active orders")
+	}
+	for _, v := range orders {
+		if orderNumber == v.ExchangeOrderID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
 	activeOrderurl := "/v1/me/getchildorders?child_order_state=ACTIVE&product_code=BTC_JPY"
 	method := "GET"

@@ -348,6 +348,19 @@ func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (p *PoloniexApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+	orders, err := p.ActiveOrders()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to get active orders")
+	}
+	for _, v := range orders {
+		if orderNumber == v.ExchangeOrderID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {
 	bs, err := p.privateApi("returnOpenOrders", map[string]string{
 		"currencyPair": "all",

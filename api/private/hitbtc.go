@@ -267,6 +267,19 @@ func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (h *HitbtcApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+	orders, err := h.ActiveOrders()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to get active orders")
+	}
+	for _, v := range orders {
+		if orderNumber == v.ExchangeOrderID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
 	bs, err := h.privateApi("GET", "/api/2/order", map[string]string{})
 	if err != nil {
