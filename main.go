@@ -2,13 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/fxpgr/go-ccex-api-client/api/private"
+	"github.com/fxpgr/go-ccex-api-client/api/public"
 )
 
 func main() {
-	cli, err := private.NewClient("huobi","0f6df47e-f968f864-481be14e-b98ac","d59d90fd-067711c2-9e65ea61-fe710")
+	cli, err := public.NewClient("hitbtc")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(cli.Balances())
+	fmt.Println(cli.RateMap())
 }

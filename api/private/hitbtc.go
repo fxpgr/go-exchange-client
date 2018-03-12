@@ -108,7 +108,7 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 }
 
 func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
-	purchaseFeeurl := "/api/2/symbol"
+	purchaseFeeurl := "/api/2/public/symbol"
 	method := "GET"
 	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
