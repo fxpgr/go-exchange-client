@@ -250,7 +250,7 @@ type Currency struct {
 func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, error) {
 	args := url2.Values{}
 	args.Add("currencyPair", settlement+"_"+trading)
-	url := p.publicApiUrl("returnOrderBook") + "?" + args.Encode()
+	url := p.publicApiUrl("returnOrderBook") + "&" + args.Encode()
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
