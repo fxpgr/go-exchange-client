@@ -402,7 +402,7 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 
 func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
 	args := make(map[string]string)
-	_, err := h.privateApi("POST", "/api/2/order/"+orderNumber, args)
+	_, err := h.privateApi("DELETE", "/api/2/order/"+orderNumber, args)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
 	}
