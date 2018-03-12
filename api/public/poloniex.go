@@ -190,6 +190,20 @@ func (p *PoloniexApi) RateMap() (map[string]map[string]float64, error) {
 	return p.rateMap, nil
 }
 
+func (p *PoloniexApi) VolumeMap() (map[string]map[string]float64, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+	now := time.Now()
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
+		err := p.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		p.rateLastUpdated = now
+	}
+	return p.volumeMap, nil
+}
+
 func (p *PoloniexApi) Rate(trading string, settlement string) (float64, error) {
 	p.m.Lock()
 	defer p.m.Unlock()

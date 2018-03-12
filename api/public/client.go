@@ -18,6 +18,7 @@ type PublicClient interface {
 	CurrencyPairs() ([]models.CurrencyPair, error)
 	Rate(trading string, settlement string) (float64, error)
 	RateMap() (map[string]map[string]float64, error)
+	VolumeMap() (map[string]map[string]float64, error)
 	FrozenCurrency() ([]string, error)
 	Board(trading string, settlement string) (*models.Board, error)
 }

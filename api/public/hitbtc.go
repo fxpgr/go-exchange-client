@@ -190,6 +190,20 @@ func (h *HitbtcApi) RateMap() (map[string]map[string]float64, error) {
 	return h.rateMap, nil
 }
 
+func (h *HitbtcApi) VolumeMap() (map[string]map[string]float64, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.volumeMap, nil
+}
+
 func (h *HitbtcApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	h.m.Lock()
 	defer h.m.Unlock()

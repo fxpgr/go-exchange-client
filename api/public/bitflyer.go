@@ -208,6 +208,20 @@ func (b *BitflyerApi) RateMap() (map[string]map[string]float64, error) {
 	return b.rateMap, nil
 }
 
+func (b *BitflyerApi) VolumeMap() (map[string]map[string]float64, error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	now := time.Now()
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
+		err := b.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		b.rateLastUpdated = now
+	}
+	return b.volumeMap, nil
+}
+
 func (b *BitflyerApi) FrozenCurrency() ([]string, error) {
 	return []string{}, nil
 }
