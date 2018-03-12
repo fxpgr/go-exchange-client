@@ -358,7 +358,7 @@ func (h *HitbtcApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-	pair := strings.ToLower(fmt.Sprintf("%s%s", settlement, trading))
+	pair := strings.ToUpper(fmt.Sprintf("%s%s", settlement, trading))
 	args := make(map[string]string)
 	args["side"] = cmd
 	args["symbol"] = pair
