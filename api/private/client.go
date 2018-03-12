@@ -21,9 +21,10 @@ type PrivateClient interface {
 	IsOrderFilled(orderNumber string, _ string) (bool, error)
 	Order(trading string, settlement string,
 		ordertype models.OrderType, price float64, amount float64) (string, error)
+	CancelOrder(orderNumber string, productCode string) error
+	//FilledOrderInfo(orderNumber string) (models.FilledOrderInfo,error)
 	Transfer(typ string, addr string,
 		amount float64, additionalFee float64) error
-	CancelOrder(orderNumber string, productCode string) error
 	Address(c string) (string, error)
 }
 
