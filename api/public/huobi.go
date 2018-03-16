@@ -27,7 +27,7 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
-		HttpClient: &http.Client{},
+		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
 		rt:         &http.Transport{},
 
 		m:         new(sync.Mutex),
