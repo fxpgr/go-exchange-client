@@ -9,8 +9,8 @@ import (
 
 	"encoding/json"
 	"github.com/antonholmquist/jason"
-	"github.com/fxpgr/go-ccex-api-client/logger"
-	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/fxpgr/go-exchange-client/logger"
+	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	url2 "net/url"

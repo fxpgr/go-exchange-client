@@ -15,7 +15,7 @@ import (
 
 	"github.com/Jeffail/gabs"
 	"github.com/antonholmquist/jason"
-	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 )
 

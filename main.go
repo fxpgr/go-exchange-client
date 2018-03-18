@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/fxpgr/go-ccex-api-client/api/public"
+	"github.com/fxpgr/go-exchange-client/api/public"
 )
 
 func main() {

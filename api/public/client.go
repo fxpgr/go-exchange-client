@@ -2,7 +2,7 @@ package public
 
 import (
 	"errors"
-	"github.com/fxpgr/go-ccex-api-client/models"
+	"github.com/fxpgr/go-exchange-client/models"
 	"strings"
 	"sync"
 )
