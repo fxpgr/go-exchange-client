@@ -355,10 +355,10 @@ func (p *PoloniexApi) IsOrderFilled(orderNumber string, _ string) (bool, error) 
 	}
 	for _, v := range orders {
 		if orderNumber == v.ExchangeOrderID {
-			return true, nil
+			return false, nil
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
 func (p *PoloniexApi) ActiveOrders() ([]*models.Order, error) {

@@ -159,7 +159,7 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 }
 
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
-	purchaseFeeurl := "/api/2/currency"
+	purchaseFeeurl := "/api/2/public/currency"
 	method := "GET"
 	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
@@ -167,11 +167,12 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	}
 	json, err := gabs.ParseJSON(resBody)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
 	}
+	fmt.Println(json)
 	currencyMap, err := json.Children()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
 	}
 	transferFeeMap := make(map[string]float64)
 	for _, v := range currencyMap {
@@ -181,7 +182,7 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 		}
 		payoutFee, err := strconv.ParseFloat(payoutFeeStr, 10)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json")
+			return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
 		}
 		currency, ok := v.Path("id").Data().(string)
 		if !ok {
@@ -274,10 +275,10 @@ func (h *HitbtcApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
 	}
 	for _, v := range orders {
 		if orderNumber == v.ExchangeOrderID {
-			return true, nil
+			return false, nil
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
 func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
@@ -383,12 +384,10 @@ func (h *HitbtcApi) Order(trading string, settlement string, ordertype models.Or
 
 func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additionalFee float64) error {
 	args := make(map[string]string)
-	args["address"] = addr
 	args["currency"] = typ
 	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
-	args["networkFee"] = strconv.FormatFloat(additionalFee, 'g', -1, 64)
-
-	bs, err := h.privateApi("POST", "/api/2/account/crypto/withdraw", args)
+	args["type"] = "exchangeToBank"
+	bs, err := h.privateApi("POST", "/api/2/account/transfer", args)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer deposit")
 	}
@@ -397,6 +396,29 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
 	_, err = json.GetString("id")
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
+	}
+
+	args = make(map[string]string)
+	args["address"] = addr
+	args["currency"] = typ
+	args["amount"] = strconv.FormatFloat(amount, 'g', -1, 64)
+	args["networkFee"] = strconv.FormatFloat(additionalFee, 'g', -1, 64)
+
+	bs, err = h.privateApi("POST", "/api/2/account/crypto/withdraw", args)
+	if err != nil {
+		return errors.Wrap(err, "failed to transfer deposit")
+	}
+	json, err = jason.NewObjectFromBytes(bs)
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
+	}
+	fmt.Println(json)
+	_, err = json.GetString("id")
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
+	}
 	return err
 }
 

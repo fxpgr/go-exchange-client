@@ -250,10 +250,10 @@ func (b *BitflyerApi) IsOrderFilled(orderNumber string, _ string) (bool, error) 
 	}
 	for _, v := range orders {
 		if orderNumber == v.ExchangeOrderID {
-			return true, nil
+			return false, nil
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
 func (b *BitflyerApi) ActiveOrders() ([]*models.Order, error) {
