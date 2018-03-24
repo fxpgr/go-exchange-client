@@ -16,44 +16,44 @@ type Board struct {
 	Bids []BoardOrder
 }
 
-func (b *Board) BestBuyAmount() (float64, error) {
+func (b *Board) BestBuyAmount() (float64) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price > b.Bids[j].Price
 	})
 	if len(b.Bids) == 0 {
-		return 0, errors.New("there is no bids")
+		return 0
 	}
-	return b.Bids[0].Amount, nil
+	return b.Bids[0].Amount
 }
 
-func (b *Board) BestSellAmount() (float64, error) {
+func (b *Board) BestSellAmount() (float64) {
 	sort.Slice(b.Asks, func(i, j int) bool {
 		return b.Asks[i].Price < b.Asks[j].Price
 	})
 	if len(b.Asks) == 0 {
-		return 0, errors.New("there is no bids")
+		return 0
 	}
-	return b.Asks[0].Amount, nil
+	return b.Asks[0].Amount
 }
 
-func (b *Board) BestBuyPrice() (float64, error) {
+func (b *Board) BestBuyPrice() (float64) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price > b.Bids[j].Price
 	})
 	if len(b.Bids) == 0 {
-		return 0, errors.New("there is no bids")
+		return 0
 	}
-	return b.Bids[0].Price, nil
+	return b.Bids[0].Price
 }
 
-func (b *Board) BestSellPrice() (float64, error) {
+func (b *Board) BestSellPrice() (float64) {
 	sort.Slice(b.Asks, func(i, j int) bool {
 		return b.Asks[i].Price < b.Asks[j].Price
 	})
 	if len(b.Asks) == 0 {
-		return 0, errors.New("there is no bids")
+		return 0
 	}
-	return b.Asks[0].Price, nil
+	return b.Asks[0].Price
 }
 
 func (b *Board) AverageBuyRate(amount float64) (float64, error) {
