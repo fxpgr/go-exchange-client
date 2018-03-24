@@ -16,6 +16,26 @@ type Board struct {
 	Bids []BoardOrder
 }
 
+func (b *Board) BestBuyAmount() (float64, error) {
+	sort.Slice(b.Bids, func(i, j int) bool {
+		return b.Bids[i].Price > b.Bids[j].Price
+	})
+	if len(b.Bids) == 0 {
+		return 0, errors.New("there is no bids")
+	}
+	return b.Bids[0].Amount, nil
+}
+
+func (b *Board) BestSellAmount() (float64, error) {
+	sort.Slice(b.Asks, func(i, j int) bool {
+		return b.Asks[i].Price < b.Asks[j].Price
+	})
+	if len(b.Asks) == 0 {
+		return 0, errors.New("there is no bids")
+	}
+	return b.Asks[0].Amount, nil
+}
+
 func (b *Board) BestBuyPrice() (float64, error) {
 	sort.Slice(b.Bids, func(i, j int) bool {
 		return b.Bids[i].Price > b.Bids[j].Price
