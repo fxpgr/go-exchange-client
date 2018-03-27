@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 	"io/ioutil"
 	url2 "net/url"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -64,7 +64,7 @@ func (h *OkexApi) publicApiUrl(command string) string {
 }
 
 func (h *OkexApi) fetchSettlements() error {
-	pairs,err := h.CurrencyPairs()
+	pairs, err := h.CurrencyPairs()
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch settlements")
 	}
@@ -114,7 +114,7 @@ func (h *OkexApi) fetchRate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
-		lastf, err:= strconv.ParseFloat(lastString,64)
+		lastf, err := strconv.ParseFloat(lastString, 64)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
@@ -123,16 +123,16 @@ func (h *OkexApi) fetchRate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
-		volumef, err:= strconv.ParseFloat(volumeString,64)
+		volumef, err := strconv.ParseFloat(volumeString, 64)
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
 
 		pairString, err := v.GetString("symbol")
 		if err != nil {
-			return  errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse quote")
 		}
-		currencies:= strings.Split(pairString,"_")
+		currencies := strings.Split(pairString, "_")
 		if len(currencies) != 2 {
 			continue
 		}
@@ -213,7 +213,7 @@ func (h *OkexApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse quote")
 		}
-		currencies:= strings.Split(pairString,"_")
+		currencies := strings.Split(pairString, "_")
 		if len(currencies) != 2 {
 			continue
 		}
@@ -318,7 +318,7 @@ func (h *OkexApi) FrozenCurrency() ([]string, error) {
 func (h *OkexApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	args := url2.Values{}
 	args.Add("size", "200")
-	method := "/v2/markets/"+strings.ToLower(trading)+"_"+strings.ToLower(settlement)+"/depth?"+args.Encode()
+	method := "/v2/markets/" + strings.ToLower(trading) + "_" + strings.ToLower(settlement) + "/depth?" + args.Encode()
 	url := h.publicApiUrl(method)
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
@@ -349,19 +349,19 @@ func (h *OkexApi) Board(trading string, settlement string) (board *models.Board,
 	bids := make([]models.BoardOrder, 0)
 	asks := make([]models.BoardOrder, 0)
 	for _, v := range jsonBids {
-		priceString,err:= v.GetString("price")
+		priceString, err := v.GetString("price")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		sizeString,err := v.GetString("totalSize")
+		sizeString, err := v.GetString("totalSize")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		pricef ,err := strconv.ParseFloat(priceString,64)
+		pricef, err := strconv.ParseFloat(priceString, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		sizef ,err := strconv.ParseFloat(sizeString,64)
+		sizef, err := strconv.ParseFloat(sizeString, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}
@@ -373,19 +373,19 @@ func (h *OkexApi) Board(trading string, settlement string) (board *models.Board,
 	}
 	for _, v := range jsonAsks {
 
-		priceString,err:= v.GetString("price")
+		priceString, err := v.GetString("price")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		sizeString,err := v.GetString("totalSize")
+		sizeString, err := v.GetString("totalSize")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		pricef ,err := strconv.ParseFloat(priceString,64)
+		pricef, err := strconv.ParseFloat(priceString, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		sizef ,err := strconv.ParseFloat(sizeString,64)
+		sizef, err := strconv.ParseFloat(sizeString, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}

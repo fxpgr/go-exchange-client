@@ -23,11 +23,11 @@ const (
 func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
 	hitbtcPublic, err := public.NewHuobiPublicApi()
 	if err != nil {
-		return nil, errors.Wrap(err,"failed to initialize public client")
+		return nil, errors.Wrap(err, "failed to initialize public client")
 	}
 	pairs, err := hitbtcPublic.CurrencyPairs()
 	if err != nil {
-		return nil, errors.Wrap(err,"failed to get pairs")
+		return nil, errors.Wrap(err, "failed to get pairs")
 	}
 	var settlements []string
 	for _, v := range pairs {

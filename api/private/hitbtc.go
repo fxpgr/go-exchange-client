@@ -167,12 +167,12 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	}
 	json, err := gabs.ParseJSON(resBody)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
+		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 	}
 	fmt.Println(json)
 	currencyMap, err := json.Children()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
+		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 	}
 	transferFeeMap := make(map[string]float64)
 	for _, v := range currencyMap {
@@ -182,7 +182,7 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 		}
 		payoutFee, err := strconv.ParseFloat(payoutFeeStr, 10)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json: %v",string(resBody))
+			return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 		}
 		currency, ok := v.Path("id").Data().(string)
 		if !ok {

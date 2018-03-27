@@ -12,6 +12,6 @@ func main() {
 	}
 	fmt.Println(cli.RateMap())
 	fmt.Println(cli.VolumeMap())
-	fmt.Println(cli.Board("ETH","BTC"))
+	fmt.Println(cli.Board("ETH", "BTC"))
 	fmt.Println(cli.FrozenCurrency())
 }

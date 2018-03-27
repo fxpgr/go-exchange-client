@@ -17,6 +17,6 @@ type Order struct {
 }
 
 type FilledOrderInfo struct {
-	Price float64
+	Price  float64
 	Amount float64
 }
