@@ -47,6 +47,8 @@ func NewClient(exchangeName string) (PublicClient, error) {
 		return NewHitbtcPublicApi()
 	case "huobi":
 		return NewHuobiPublicApi()
+	case "okex":
+		return NewOkexPublicApi()
 	}
 	return nil, errors.New("failed to init exchange api")
 }
