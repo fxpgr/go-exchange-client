@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	cli, err := public.NewClient("okex")
+	cli, err := public.NewClient("cobinhood")
 	if err != nil {
 		panic(err)
 	}
