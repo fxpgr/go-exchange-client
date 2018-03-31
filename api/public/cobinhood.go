@@ -6,13 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"io/ioutil"
-	"strings"
 	"net/url"
-	"fmt"
+	"strings"
 )
 
 const (
@@ -24,15 +24,15 @@ type CobinhoodApiConfig struct {
 
 func NewCobinhoodPublicApi() (*CobinhoodApi, error) {
 	api := &CobinhoodApi{
-		BaseURL:           COBINHOOD_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
-		rateMap:           nil,
-		volumeMap:         nil,
-		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		BaseURL:                    COBINHOOD_BASE_URL,
+		RateCacheDuration:          30 * time.Second,
+		rateMap:                    nil,
+		volumeMap:                  nil,
+		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
-		m: new(sync.Mutex),
+		m:         new(sync.Mutex),
 		currencyM: new(sync.Mutex),
 	}
 	api.fetchSettlements()
@@ -40,21 +40,21 @@ func NewCobinhoodPublicApi() (*CobinhoodApi, error) {
 }
 
 type CobinhoodApi struct {
-	BaseURL           string
-	RateCacheDuration time.Duration
-	volumeMap         map[string]map[string]float64
-	rateMap           map[string]map[string]float64
-	rateLastUpdated   time.Time
+	BaseURL                    string
+	RateCacheDuration          time.Duration
+	volumeMap                  map[string]map[string]float64
+	rateMap                    map[string]map[string]float64
+	rateLastUpdated            time.Time
 	currencyPairs              []models.CurrencyPair
 	CurrencyPairsCacheDuration time.Duration
 	currencyPairsLastUpdated   time.Time
-	HttpClient        http.Client
+	HttpClient                 http.Client
 
 	settlements []string
 
-	m *sync.Mutex
+	m         *sync.Mutex
 	currencyM *sync.Mutex
-	c *CobinhoodApiConfig
+	c         *CobinhoodApiConfig
 }
 
 func (h *CobinhoodApi) publicApiUrl(command string) string {
@@ -306,7 +306,7 @@ func (h *CobinhoodApi) FrozenCurrency() ([]string, error) {
 		if err != nil {
 			continue
 		}
-		if !isFrozen && isActive{
+		if !isFrozen && isActive {
 			continue
 		}
 		currencyName, err := v.GetString("currency")
@@ -321,7 +321,7 @@ func (h *CobinhoodApi) FrozenCurrency() ([]string, error) {
 func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	args := url.Values{}
 	args.Add("limit", "10000")
-	path := h.publicApiUrl("/v1/market/orderbooks/" + trading +"-"+ settlement) +"?"+args.Encode()
+	path := h.publicApiUrl("/v1/market/orderbooks/"+trading+"-"+settlement) + "?" + args.Encode()
 	resp, err := h.HttpClient.Get(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", path)
@@ -368,11 +368,11 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		price,err := strconv.ParseFloat(priceStr,64)
+		price, err := strconv.ParseFloat(priceStr, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		amount,err := strconv.ParseFloat(amountStr,64)
+		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
@@ -396,11 +396,11 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		price,err := strconv.ParseFloat(priceStr,64)
+		price, err := strconv.ParseFloat(priceStr, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		amount,err := strconv.ParseFloat(amountStr,64)
+		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
