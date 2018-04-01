@@ -41,13 +41,12 @@ type BitflyerApi struct {
 	m *sync.Mutex
 }
 
-func NewBitflyerPrivateApi(mode ClientMode, apikey string, apisecret string) (*BitflyerApi, error) {
+func NewBitflyerPrivateApi( apikey string, apisecret string) (*BitflyerApi, error) {
 	api := &BitflyerApi{
 		Apikey:            apikey,
 		ApiSecret:         apisecret,
 		BaseURL:           BITFLYER_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		Mode:              mode,
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),

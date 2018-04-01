@@ -31,13 +31,13 @@ type PrivateClient interface {
 func NewClient(mode ClientMode, exchangeName string, apikey string, seckey string) (PrivateClient, error) {
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
-		return NewBitflyerPrivateApi(mode, apikey, seckey)
+		return NewBitflyerPrivateApi( apikey, seckey)
 	case "poloniex":
-		return NewPoloniexApi(mode, apikey, seckey)
+		return NewPoloniexApi( apikey, seckey)
 	case "hitbtc":
-		return NewHitbtcApi(mode, apikey, seckey)
+		return NewHitbtcApi( apikey, seckey)
 	case "huobi":
-		return NewHuobiApi(mode, apikey, seckey)
+		return NewHuobiApi( apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }
