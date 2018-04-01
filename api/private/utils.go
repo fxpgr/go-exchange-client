@@ -11,6 +11,13 @@ import (
 	"strings"
 )
 
+type ClientMode int
+
+const (
+	TEST ClientMode = iota
+	PROJECT
+)
+
 func parseCurrencyPair(s string) (string, string, error) {
 	xs := strings.Split(s, "_")
 

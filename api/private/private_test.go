@@ -36,15 +36,15 @@ func (rt *FakeRoundTripper) Reset() {
 }
 
 func TestNewClient(t *testing.T) {
-	_, err := NewClient("bitflyer", "APIKEY", "SECRETKEY")
+	_, err := NewClient(TEST,"bitflyer", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient("poloniex", "APIKEY", "SECRETKEY")
+	_, err = NewClient(TEST,"poloniex", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient("hitbtc", "APIKEY", "SECRETKEY")
+	_, err = NewClient(TEST,"hitbtc", "APIKEY", "SECRETKEY")
 	if err != nil {
 		panic(err)
 	}

@@ -20,7 +20,7 @@ const (
 	HUOBI_BASE_URL = "https://api.huobi.pro"
 )
 
-func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
+func NewHuobiApi(mode ClientMode, apikey string, apisecret string) (*HuobiApi, error) {
 	hitbtcPublic, err := public.NewHuobiPublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -47,6 +47,7 @@ func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
+		Mode:              mode,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -65,6 +66,7 @@ type HuobiApi struct {
 	HttpClient        http.Client
 	rt                *http.Transport
 	settlements       []string
+	Mode              ClientMode
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64

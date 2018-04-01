@@ -25,12 +25,13 @@ const (
 	POLONIEX_BASE_URL = "https://poloniex.com"
 )
 
-func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
+func NewPoloniexApi(mode ClientMode, apikey string, apisecret string) (*PoloniexApi, error) {
 	return &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
 		RateCacheDuration: 7 * 24 * time.Hour,
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
+		Mode:              mode,
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -45,6 +46,7 @@ type PoloniexApi struct {
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
+	Mode              ClientMode
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64

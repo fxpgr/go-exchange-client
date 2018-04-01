@@ -22,7 +22,7 @@ const (
 	HITBTC_BASE_URL = "https://api.hitbtc.com"
 )
 
-func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
+func NewHitbtcApi(mode ClientMode, apikey string, apisecret string) (*HitbtcApi, error) {
 	hitbtcPublic, err := public.NewHitbtcPublicApi()
 	if err != nil {
 		return nil, err
@@ -50,6 +50,7 @@ func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
 		ApiKey:            apikey,
 		SecretKey:         apisecret,
 		settlements:       uniq,
+		Mode:              mode,
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -65,6 +66,7 @@ type HitbtcApi struct {
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
 	settlements       []string
+	Mode              ClientMode
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64

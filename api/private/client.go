@@ -28,16 +28,16 @@ type PrivateClient interface {
 	Address(c string) (string, error)
 }
 
-func NewClient(exchangeName string, apikey string, seckey string) (PrivateClient, error) {
+func NewClient(mode ClientMode, exchangeName string, apikey string, seckey string) (PrivateClient, error) {
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
-		return NewBitflyerPrivateApi(apikey, seckey)
+		return NewBitflyerPrivateApi(mode, apikey, seckey)
 	case "poloniex":
-		return NewPoloniexApi(apikey, seckey)
+		return NewPoloniexApi(mode, apikey, seckey)
 	case "hitbtc":
-		return NewHitbtcApi(apikey, seckey)
+		return NewHitbtcApi(mode, apikey, seckey)
 	case "huobi":
-		return NewHuobiApi(apikey, seckey)
+		return NewHuobiApi(mode, apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }
