@@ -126,7 +126,7 @@ func (b *BitflyerApi) PurchaseFeeRate() (float64, error) {
 	return purchaseFee, nil
 }
 
-func (b *BitflyerApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+func (b *BitflyerApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	purchaseFeeurl := "/v1/me/gettradingcommission?product_code=BTC_JPY"
 	method := "GET"
 	resBody, err := b.privateApi(method, purchaseFeeurl, map[string]string{})
@@ -152,6 +152,12 @@ func (b *BitflyerApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		traderFeeMap[trading] = m
 	}
 	return traderFeeMap, nil
+}
+
+func (b *BitflyerApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
+	feeMap,err := b.TradeFeeRates()
+	if err != nil {return TradeFee{},err}
+	return feeMap[trading][settlement],nil
 }
 
 func (b *BitflyerApi) TransferFee() (map[string]float64, error) {

@@ -107,7 +107,7 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 	return resBody, nil
 }
 
-func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+func (h *HitbtcApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	purchaseFeeurl := "/api/2/public/symbol"
 	method := "GET"
 	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
@@ -156,6 +156,12 @@ func (h *HitbtcApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		traderFeeMap[baseCurrency] = n
 	}
 	return traderFeeMap, nil
+}
+
+func (b *HitbtcApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
+	feeMap,err := b.TradeFeeRates()
+	if err != nil {return TradeFee{},err}
+	return feeMap[trading][settlement],nil
 }
 
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {

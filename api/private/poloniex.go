@@ -194,7 +194,7 @@ func (p *PoloniexApi) fetchRate() error {
 	return nil
 }
 
-func (p *PoloniexApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+func (p *PoloniexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
@@ -243,6 +243,11 @@ func (p *PoloniexApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 	return traderFeeMap, nil
 }
 
+func (b *PoloniexApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
+	feeMap,err := b.TradeFeeRates()
+	if err != nil {return TradeFee{},err}
+	return feeMap[trading][settlement],nil
+}
 type Currency struct {
 	ID             int     `json:"id"`
 	Name           string  `json:"name"`

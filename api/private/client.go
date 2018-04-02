@@ -4,6 +4,7 @@ import (
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"strings"
+	"github.com/stretchr/testify/mock"
 )
 
 type TradeFee struct {
@@ -14,7 +15,8 @@ type TradeFee struct {
 //go:generate mockery -name=PrivateClient
 type PrivateClient interface {
 	TransferFee() (map[string]float64, error)
-	TradeFeeRate() (map[string]map[string]TradeFee, error)
+	TradeFeeRates() (map[string]map[string]TradeFee, error)
+	TradeFeeRate(string,string) (TradeFee, error)
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
@@ -29,6 +31,20 @@ type PrivateClient interface {
 }
 
 func NewClient(mode ClientMode, exchangeName string, apikey string, seckey string) (PrivateClient, error) {
+	if mode == TEST {
+		m := new(PrivateClientMock)
+		retCompleteBalance := make(map[string]*models.Balance)
+		retCompleteBalance["BTC"] = &models.Balance{Available:10000, OnOrders:0}
+		retActiveOrders := make([]*models.Order,0)
+		retTradeFeeRate := TradeFee{MakerFee:0.002,TakerFee:0.002}
+		m.On("CompleteBalances").Return(retCompleteBalance,nil)
+		m.On("ActiveOrders").Return(retActiveOrders,nil)
+		m.On("IsOrderFilled", mock.Anything,mock.Anything).Return(true, nil)
+		m.On("Order",mock.Anything,mock.Anything,mock.Anything,mock.Anything,mock.Anything).Return("12345", nil)
+		m.On("CancelOrder", mock.Anything,mock.Anything).Return(nil)
+		m.On("TraderFeeRate",mock.Anything,mock.Anything).Return(retTradeFeeRate, nil)
+		return m,nil
+	}
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
 		return NewBitflyerPrivateApi( apikey, seckey)

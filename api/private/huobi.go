@@ -91,7 +91,7 @@ func (h *HuobiApi) privateApi(method string, path string, params *url.Values) ([
 	return resBody, err
 }
 
-func (h *HuobiApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
+func (h *HuobiApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	cli, err := public.NewClient("huobi")
 	if err != nil {
 		return nil, err
@@ -107,6 +107,12 @@ func (h *HuobiApi) TradeFeeRate() (map[string]map[string]TradeFee, error) {
 		traderFeeMap[p.Trading] = n
 	}
 	return traderFeeMap, nil
+}
+
+func (b *HuobiApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
+	feeMap,err := b.TradeFeeRates()
+	if err != nil {return TradeFee{},err}
+	return feeMap[trading][settlement],nil
 }
 
 type HuobiTransferFeeResponse struct {
