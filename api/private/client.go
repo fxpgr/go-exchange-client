@@ -42,7 +42,7 @@ func NewClient(mode ClientMode, exchangeName string, apikey string, seckey strin
 		m.On("IsOrderFilled", mock.Anything,mock.Anything).Return(true, nil)
 		m.On("Order",mock.Anything,mock.Anything,mock.Anything,mock.Anything,mock.Anything).Return("12345", nil)
 		m.On("CancelOrder", mock.Anything,mock.Anything).Return(nil)
-		m.On("TraderFeeRate",mock.Anything,mock.Anything).Return(retTradeFeeRate, nil)
+		m.On("TradeFeeRate",mock.Anything,mock.Anything).Return(retTradeFeeRate, nil)
 		return m,nil
 	}
 	switch strings.ToLower(exchangeName) {
