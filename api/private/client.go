@@ -3,8 +3,8 @@ package private
 import (
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
-	"strings"
 	"github.com/stretchr/testify/mock"
+	"strings"
 )
 
 type TradeFee struct {
@@ -16,7 +16,7 @@ type TradeFee struct {
 type PrivateClient interface {
 	TransferFee() (map[string]float64, error)
 	TradeFeeRates() (map[string]map[string]TradeFee, error)
-	TradeFeeRate(string,string) (TradeFee, error)
+	TradeFeeRate(string, string) (TradeFee, error)
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
@@ -34,26 +34,26 @@ func NewClient(mode ClientMode, exchangeName string, apikey string, seckey strin
 	if mode == TEST {
 		m := new(PrivateClientMock)
 		retCompleteBalance := make(map[string]*models.Balance)
-		retCompleteBalance["BTC"] = &models.Balance{Available:10000, OnOrders:0}
-		retActiveOrders := make([]*models.Order,0)
-		retTradeFeeRate := TradeFee{MakerFee:0.002,TakerFee:0.002}
-		m.On("CompleteBalances").Return(retCompleteBalance,nil)
-		m.On("ActiveOrders").Return(retActiveOrders,nil)
-		m.On("IsOrderFilled", mock.Anything,mock.Anything).Return(true, nil)
-		m.On("Order",mock.Anything,mock.Anything,mock.Anything,mock.Anything,mock.Anything).Return("12345", nil)
-		m.On("CancelOrder", mock.Anything,mock.Anything).Return(nil)
-		m.On("TradeFeeRate",mock.Anything,mock.Anything).Return(retTradeFeeRate, nil)
-		return m,nil
+		retCompleteBalance["BTC"] = &models.Balance{Available: 10000, OnOrders: 0}
+		retActiveOrders := make([]*models.Order, 0)
+		retTradeFeeRate := TradeFee{MakerFee: 0.002, TakerFee: 0.002}
+		m.On("CompleteBalances").Return(retCompleteBalance, nil)
+		m.On("ActiveOrders").Return(retActiveOrders, nil)
+		m.On("IsOrderFilled", mock.Anything, mock.Anything).Return(true, nil)
+		m.On("Order", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("12345", nil)
+		m.On("CancelOrder", mock.Anything, mock.Anything).Return(nil)
+		m.On("TradeFeeRate", mock.Anything, mock.Anything).Return(retTradeFeeRate, nil)
+		return m, nil
 	}
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
-		return NewBitflyerPrivateApi( apikey, seckey)
+		return NewBitflyerPrivateApi(apikey, seckey)
 	case "poloniex":
-		return NewPoloniexApi( apikey, seckey)
+		return NewPoloniexApi(apikey, seckey)
 	case "hitbtc":
-		return NewHitbtcApi( apikey, seckey)
+		return NewHitbtcApi(apikey, seckey)
 	case "huobi":
-		return NewHuobiApi( apikey, seckey)
+		return NewHuobiApi(apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }

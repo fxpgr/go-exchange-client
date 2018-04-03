@@ -159,9 +159,11 @@ func (h *HitbtcApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 }
 
 func (b *HitbtcApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
-	feeMap,err := b.TradeFeeRates()
-	if err != nil {return TradeFee{},err}
-	return feeMap[trading][settlement],nil
+	feeMap, err := b.TradeFeeRates()
+	if err != nil {
+		return TradeFee{}, err
+	}
+	return feeMap[trading][settlement], nil
 }
 
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {

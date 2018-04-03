@@ -244,10 +244,13 @@ func (p *PoloniexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 }
 
 func (b *PoloniexApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
-	feeMap,err := b.TradeFeeRates()
-	if err != nil {return TradeFee{},err}
-	return feeMap[trading][settlement],nil
+	feeMap, err := b.TradeFeeRates()
+	if err != nil {
+		return TradeFee{}, err
+	}
+	return feeMap[trading][settlement], nil
 }
+
 type Currency struct {
 	ID             int     `json:"id"`
 	Name           string  `json:"name"`

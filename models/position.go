@@ -2,7 +2,7 @@ package models
 
 type Position int
 
-const(
+const (
 	Long Position = iota
 	Short
 )

@@ -41,7 +41,7 @@ type BitflyerApi struct {
 	m *sync.Mutex
 }
 
-func NewBitflyerPrivateApi( apikey string, apisecret string) (*BitflyerApi, error) {
+func NewBitflyerPrivateApi(apikey string, apisecret string) (*BitflyerApi, error) {
 	api := &BitflyerApi{
 		Apikey:            apikey,
 		ApiSecret:         apisecret,
@@ -155,9 +155,11 @@ func (b *BitflyerApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 }
 
 func (b *BitflyerApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
-	feeMap,err := b.TradeFeeRates()
-	if err != nil {return TradeFee{},err}
-	return feeMap[trading][settlement],nil
+	feeMap, err := b.TradeFeeRates()
+	if err != nil {
+		return TradeFee{}, err
+	}
+	return feeMap[trading][settlement], nil
 }
 
 func (b *BitflyerApi) TransferFee() (map[string]float64, error) {
