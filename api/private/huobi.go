@@ -103,7 +103,7 @@ func (h *HuobiApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	traderFeeMap := make(map[string]map[string]TradeFee)
 	for _, p := range pairs {
 		n := make(map[string]TradeFee)
-		n[p.Settlement] = TradeFee{0.2, 0.2}
+		n[p.Settlement] = TradeFee{0.002, 0.002}
 		traderFeeMap[p.Trading] = n
 	}
 	return traderFeeMap, nil
