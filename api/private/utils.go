@@ -2,15 +2,15 @@ package private
 
 import (
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"crypto/md5"
-	"encoding/hex"
 )
 
 type ClientMode int
@@ -55,7 +55,7 @@ type cancelOrderResponse struct {
 func GetMd5HashSign(query string) (string, error) {
 	hasher := md5.New()
 	hasher.Write([]byte(query))
-	return hex.EncodeToString(hasher.Sum(nil)),nil
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
 
 func GetParamHmacSHA256Base64Sign(secret, params string) (string, error) {

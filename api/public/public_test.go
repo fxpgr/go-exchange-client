@@ -456,7 +456,6 @@ func TestHuobiBoard(t *testing.T) {
 	}
 }
 
-
 func TestLbankCurrencyPairs(t *testing.T) {
 	jsonSymbol := `[
   "bcc_eth","etc_btc","dbc_neo","eth_btc",

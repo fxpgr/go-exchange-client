@@ -90,7 +90,7 @@ type LbankTickResponse struct {
 func (h *LbankApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
-	url := h.publicApiUrl("/v1/ticker.do?symbol=all")
+	url := h.publicApiUrl("/v1/ticker.do") + "?symbol=all"
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -288,7 +288,7 @@ func (h *LbankApi) FrozenCurrency() ([]string, error) {
 
 func (h *LbankApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	args := url2.Values{}
-	args.Add("symbol", strings.ToLower(trading) + "_" + strings.ToLower(settlement))
+	args.Add("symbol", strings.ToLower(trading)+"_"+strings.ToLower(settlement))
 	method := "/v1/depth.do?" + args.Encode()
 	url := h.publicApiUrl(method)
 	resp, err := h.HttpClient.Get(url)

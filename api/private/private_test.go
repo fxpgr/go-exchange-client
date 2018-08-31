@@ -114,7 +114,7 @@ func TestBitflyerFee(t *testing.T) {
 }`
 	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("bitflyer", rt)
-	fee, err := client.TradeFeeRate("BTC","JPY")
+	fee, err := client.TradeFeeRate("BTC", "JPY")
 	if err != nil {
 		panic(err)
 	}
@@ -240,7 +240,7 @@ func TestPoloniexFee(t *testing.T) {
 	json := `{"makerFee": "0.00140000", "takerFee": "0.00240000", "thirtyDayVolume": "612.00248891", "nextTier": "1200.00000000"}`
 	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
 	client := newTestPrivateClient("poloniex", rt)
-	fee, err := client.TradeFeeRate("ETH","BTC")
+	fee, err := client.TradeFeeRate("ETH", "BTC")
 	if err != nil {
 		panic(err)
 	}
@@ -465,7 +465,6 @@ func TestLbankOrder(t *testing.T) {
 		t.Error(err)
 	}
 }
-
 
 func TestLbankBalances(t *testing.T) {
 	t.Parallel()

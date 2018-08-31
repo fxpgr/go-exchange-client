@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"bytes"
 	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/api/public"
@@ -14,7 +15,6 @@ import (
 	"github.com/pkg/errors"
 	"strconv"
 	"strings"
-	"bytes"
 )
 
 const (
@@ -81,12 +81,12 @@ func (h *LbankApi) privateApiUrl() string {
 func (h *LbankApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
 	params.Set("api_key", h.ApiKey)
 	queryString := params.Encode() + "&secret_key=" + h.SecretKey
-	sign , _:= GetMd5HashSign(queryString)
-	params.Set("sign",strings.ToUpper(sign))
+	sign, _ := GetMd5HashSign(queryString)
+	params.Set("sign", strings.ToUpper(sign))
 
 	var urlStr string
 	urlStr = h.BaseURL + path
-	if strings.ToUpper(method) == "GET"{
+	if strings.ToUpper(method) == "GET" {
 		urlStr = urlStr + "?" + params.Encode()
 	}
 
@@ -161,7 +161,7 @@ func (sm *lbankTransferFeeSyncMap) GetAll() map[string]float64 {
 }
 
 func (h *LbankApi) TransferFee() (map[string]float64, error) {
-	url := LBANK_BASE_URL+"/v1/withdrawConfigs.do"
+	url := LBANK_BASE_URL + "/v1/withdrawConfigs.do"
 	resp, err := h.HttpClient.Get(url)
 	transferFeeMap := lbankTransferFeeSyncMap{make(lbankTransferFeeMap), new(sync.Mutex)}
 	if err != nil {
@@ -171,15 +171,15 @@ func (h *LbankApi) TransferFee() (map[string]float64, error) {
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return transferFeeMap.GetAll(),errors.Wrapf(err, "failed to fetch %s", url)
+		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewValueFromBytes(byteArray)
 	if err != nil {
-		return transferFeeMap.GetAll(),errors.Wrapf(err, "failed to parse json")
+		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to parse json")
 	}
 	data, err := json.Array()
 	if err != nil {
-		return transferFeeMap.GetAll(),errors.Wrapf(err, "failed to parse json")
+		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to parse json")
 	}
 	for _, v := range data {
 		vo, err := v.Object()
@@ -268,19 +268,19 @@ func (h *LbankApi) CompleteBalances() (map[string]*models.Balance, error) {
 		}
 
 		currency = strings.ToUpper(currency)
-		m[currency] = &models.Balance{Available:available}
+		m[currency] = &models.Balance{Available: available}
 	}
 	for currency, v := range frozens.Map() {
-		frozen,err  :=v.Float64()
+		frozen, err := v.Float64()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse json key list 3")
 		}
 		currency = strings.ToUpper(currency)
-		_,ok :=  m[currency]
+		_, ok := m[currency]
 		if ok {
 			m[currency].OnOrders = frozen
-		} else{
-			m[currency] = &models.Balance{OnOrders:frozen}
+		} else {
+			m[currency] = &models.Balance{OnOrders: frozen}
 		}
 	}
 	return m, nil

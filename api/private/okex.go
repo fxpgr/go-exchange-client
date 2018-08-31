@@ -109,7 +109,6 @@ func (o *OkexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	return traderFeeMap, nil
 }
 
-
 func (o *OkexApi) TradeFeeRate(trading string, settlement string) (TradeFee, error) {
 	feeMap, err := o.TradeFeeRates()
 	if err != nil {
@@ -123,7 +122,6 @@ type OkexTransferFeeResponse struct {
 	Currency string
 	err      error
 }
-
 
 type okexTransferFeeMap map[string]float64
 type okexTransferFeeSyncMap struct {
@@ -141,7 +139,6 @@ func (sm *okexTransferFeeSyncMap) GetAll() map[string]float64 {
 	defer sm.m.Unlock()
 	return sm.okexTransferFeeMap
 }
-
 
 func (o *OkexApi) TransferFee() (map[string]float64, error) {
 	cli, err := public.NewClient("okex")
