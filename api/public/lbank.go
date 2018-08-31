@@ -112,33 +112,33 @@ func (h *LbankApi) fetchRate() error {
 	for _, v := range data {
 		vo, err := v.Object()
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse object")
 		}
 		pairString, err := vo.GetString("symbol")
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse symbol")
 		}
 		ticker, err := vo.GetObject("ticker")
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse ticker")
 		}
 		lastString, err := ticker.GetString("latest")
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse latest")
 		}
 		volumeString, err := ticker.GetString("vol")
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse vol")
 		}
 
 		lastf, err := strconv.ParseFloat(lastString, 64)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse lastStr to float64")
 		}
 
 		volumef, err := strconv.ParseFloat(volumeString, 64)
 		if err != nil {
-			return errors.Wrapf(err, "failed to parse quote")
+			return errors.Wrapf(err, "failed to parse volumeStr to float64")
 		}
 
 		currencies := strings.Split(pairString, "_")
@@ -283,7 +283,44 @@ func (h *LbankApi) Rate(trading string, settlement string) (float64, error) {
 }
 
 func (h *LbankApi) FrozenCurrency() ([]string, error) {
-	return []string{}, nil
+	url := h.publicApiUrl("/v1/withdrawConfigs.do")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	json, err := jason.NewValueFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json value")
+	}
+	data, err := json.Array()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json array")
+	}
+	var currencies []string
+	for _, v := range data {
+		vo,err := v.Object()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse object")
+		}
+		currency,err := vo.GetString("assetCode")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse assetCode")
+		}
+		isNotFrozen,err := vo.GetBoolean("canWithDraw")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse canWithDraw")
+		}
+		if !isNotFrozen {
+			currencies = append(currencies,currency)
+		}
+	}
+	return currencies, nil
 }
 
 func (h *LbankApi) Board(trading string, settlement string) (board *models.Board, err error) {
