@@ -374,7 +374,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		asks = append(bids, models.BoardOrder{
+		asks = append(asks, models.BoardOrder{
 			Price:  pricef,
 			Amount: sizef,
 			Type:   models.Ask,
