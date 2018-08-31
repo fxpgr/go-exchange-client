@@ -90,7 +90,7 @@ type LbankTickResponse struct {
 func (h *LbankApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
-	url := h.publicApiUrl("/v1/ticker.do")
+	url := h.publicApiUrl("/v1/ticker.do?symbol=all")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
