@@ -57,6 +57,7 @@ func main() {
 | Huobi     | Done        | Done     | Done            | Done   | Done             | Done    |
 | Okex      | Done        | Done     | Done            | Done   | Done             | Done    |
 | Cobinhood | Done        | Done     | Done            | Done   | Done             | Done    |
+| Lbank     | Done        | Done     | Done            | Done   | Done             | Done    |
 
 ## PrivateAPI
 
@@ -66,3 +67,4 @@ func main() {
 | Poloniex | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
 | Hitbtc   | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
 | Huobi    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
+| Lbank    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |

@@ -92,6 +92,17 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 			m:                 new(sync.Mutex),
 		}
+	case "lbank":
+		return &LbankApi{
+			BaseURL:           endpoint,
+			RateCacheDuration: 30 * time.Second,
+			HttpClient:        http.Client{Transport: rt},
+			settlements:       []string{"BTC"},
+			rateMap:           nil,
+			volumeMap:         nil,
+			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			m:                 new(sync.Mutex),
+		}
 	}
 	return nil
 }
@@ -428,5 +439,52 @@ func TestHitbtcOthers(t *testing.T) {
 }`
 	if _, err := client.Address("LTC"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestLbankOrder(t *testing.T) {
+	t.Parallel()
+	json := `{
+  "result":"true",
+  "order_id":"123456789",
+  "success":"*****,*****,*****",
+  "error":"*****,*****"
+}`
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("lbank", rt)
+	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
+	if err != nil {
+		panic(err)
+	}
+	if orderId != "123456789" {
+		t.Errorf("LbankPrivateApi: Expected %v. Got %v", "123456789", orderId)
+	}
+	rt.message = ``
+	err = client.CancelOrder(orderId, "BTC_ETH")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+
+func TestLbankBalances(t *testing.T) {
+	t.Parallel()
+	json := `{"result":"true","info":{"freeze":{"btc":1,"zec":0,"cny":80000},"asset":{"net":95678.25},"free":{"btc":2,"zec":0,"cny":34}}}`
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("lbank", rt)
+	balances, err := client.Balances()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balances["BTC"] != 2.000000000 {
+		t.Errorf("LbankPrivateApi: Expected %v. Got %v", 2.000000000, balances["BTC"])
+	}
+	balanceMap, err := client.CompleteBalances()
+	if err != nil {
+		panic(err)
+	}
+
+	if balanceMap["BTC"].Available != 2.0 || balanceMap["BTC"].OnOrders != 1.0 {
+		t.Error("LbankPrivateApi: balance map error")
 	}
 }

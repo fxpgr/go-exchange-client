@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"crypto/md5"
+	"encoding/hex"
 )
 
 type ClientMode int
@@ -48,6 +50,12 @@ type transferResponse struct {
 }
 type cancelOrderResponse struct {
 	Success int `json:"success"`
+}
+
+func GetMd5HashSign(query string) (string, error) {
+	hasher := md5.New()
+	hasher.Write([]byte(query))
+	return hex.EncodeToString(hasher.Sum(nil)),nil
 }
 
 func GetParamHmacSHA256Base64Sign(secret, params string) (string, error) {

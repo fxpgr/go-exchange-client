@@ -71,6 +71,23 @@ func newTestHitbtcPublicClient(rt http.RoundTripper) PublicClient {
 	return api
 }
 
+func newTestLbankPublicClient(rt http.RoundTripper) PublicClient {
+	endpoint := "http://localhost:4243"
+	api := &LbankApi{
+		BaseURL:           endpoint,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        &http.Client{Transport: rt},
+		rt:                rt,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
+		rateM:             new(sync.Mutex),
+		currencyM:         new(sync.Mutex),
+	}
+	return api
+}
+
 func newTestHuobiPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	n := make(map[string]float64)
@@ -436,5 +453,72 @@ func TestHuobiBoard(t *testing.T) {
 	_, err := client.Board("BTC", "JPY")
 	if err != nil {
 		panic(err)
+	}
+}
+
+
+func TestLbankCurrencyPairs(t *testing.T) {
+	jsonSymbol := `[
+  "bcc_eth","etc_btc","dbc_neo","eth_btc",
+  "zec_btc","qtum_btc","sc_btc","ven_btc",
+  "ven_eth","sc_eth","zec_eth"
+]`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestLbankPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonSymbol
+	_, err := client.CurrencyPairs()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestLbankBoard(t *testing.T) {
+	jsonBoard := `{"asks":[[5370.4, 0.32],[5369.5, 0.28],[5369.24, 0.05],[5368.2, 0.079],[5367.9, 0.023]],"bids":[[5367.24, 0.32],[5367.16, 1.31],[5366.18, 0.56],[5366.03, 1.42],[5365.77, 2.64]]}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonBoard, status: http.StatusOK}
+	client := newTestLbankPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonBoard
+	_, err := client.Board("EOS", "ETH")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestLbankRate(t *testing.T) {
+	jsonSymbol := `[
+  "bcc_eth","etc_btc","dbc_neo","eth_btc",
+  "zec_btc","qtum_btc","sc_btc","ven_btc",
+  "ven_eth","sc_eth","zec_eth"
+]`
+	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}}]`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestLbankPublicClient(fakeRoundTripper)
+	client.CurrencyPairs()
+	fakeRoundTripper.message = jsonTicker
+	rate, err := client.Rate("ETH", "BTC")
+	if err != nil {
+		t.Error(err)
+	}
+	if rate != 7682.29 {
+		t.Errorf("LbankPublicApi: Expected %v. Got %v", 7282.29, rate)
+	}
+}
+
+func TestLbankVolume(t *testing.T) {
+	jsonSymbol := `[
+  "bcc_eth","etc_btc","dbc_neo","eth_btc",
+  "zec_btc","qtum_btc","sc_btc","ven_btc",
+  "ven_eth","sc_eth","zec_eth"
+]`
+	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}}]`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestLbankPublicClient(fakeRoundTripper)
+	client.CurrencyPairs()
+	fakeRoundTripper.message = jsonTicker
+	volume, err := client.Volume("ETH", "BTC")
+	if err != nil {
+		panic(err)
+	}
+	if volume != 1316.3235 {
+		t.Errorf("LbankPublicApi: Expected %v. Got %v", 1316.3235, volume)
 	}
 }

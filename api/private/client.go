@@ -56,6 +56,8 @@ func NewClient(mode ClientMode, exchangeName string, apikey string, seckey strin
 		return NewHitbtcApi(apikey, seckey)
 	case "huobi":
 		return NewHuobiApi(apikey, seckey)
+	case "lbank":
+		return NewLbankApi(apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }
