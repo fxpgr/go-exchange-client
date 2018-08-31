@@ -488,7 +488,7 @@ func TestLbankRate(t *testing.T) {
   "zec_btc","qtum_btc","sc_btc","ven_btc",
   "ven_eth","sc_eth","zec_eth"
 ]`
-	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}}]`
+	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":4.21,"high":7722.58,"latest":7682.29,"low":7348.30,"turnover":0.00,"vol":1316.3235}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":4.21,"high":7722.58,"latest":7682.29,"low":7348.30,"turnover":0.00,"vol":1316.3235}}]`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
 	client := newTestLbankPublicClient(fakeRoundTripper)
 	client.CurrencyPairs()
@@ -508,7 +508,7 @@ func TestLbankVolume(t *testing.T) {
   "zec_btc","qtum_btc","sc_btc","ven_btc",
   "ven_eth","sc_eth","zec_eth"
 ]`
-	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":"4.21","high":"7722.58","latest":"7682.29","low":"7348.30","turnover":"0.00","vol":"1316.3235"}}]`
+	jsonTicker := `[{"symbol":"eth_btc","timestamp":"1410431279000","ticker":{"change":4.21,"high":7722.58,"latest":7682.29,"low":7348.30,"turnover":0.00,"vol":1316.3235}},{"symbol":"sc_btc","timestamp":"1410431279000","ticker":{"change":4.21,"high":7722.58,"latest":7682.29,"low":7348.30,"turnover":0.00,"vol":1316.3235}}]`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
 	client := newTestLbankPublicClient(fakeRoundTripper)
 	client.CurrencyPairs()
