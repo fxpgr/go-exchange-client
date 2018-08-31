@@ -315,6 +315,7 @@ func (h *LbankApi) FrozenCurrency() ([]string, error) {
 func (h *LbankApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	args := url2.Values{}
 	args.Add("symbol", strings.ToLower(trading)+"_"+strings.ToLower(settlement))
+	args.Add("size","60")
 	method := "/v1/depth.do?" + args.Encode()
 	url := h.publicApiUrl(method)
 	resp, err := h.HttpClient.Get(url)
