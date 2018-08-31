@@ -122,23 +122,13 @@ func (h *LbankApi) fetchRate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse ticker")
 		}
-		lastString, err := ticker.GetString("latest")
+		lastf, err := ticker.GetFloat64("latest")
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse latest")
 		}
-		volumeString, err := ticker.GetString("vol")
+		volumef, err := ticker.GetFloat64("vol")
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse vol")
-		}
-
-		lastf, err := strconv.ParseFloat(lastString, 64)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse lastStr to float64")
-		}
-
-		volumef, err := strconv.ParseFloat(volumeString, 64)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse volumeStr to float64")
 		}
 
 		currencies := strings.Split(pairString, "_")
