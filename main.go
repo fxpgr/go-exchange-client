@@ -16,7 +16,7 @@ func main() {
 	cli, err := public.NewClient("kucoin")
 	if err != nil {
 		panic(err)
-}
+	}
 	if _, err := cli.RateMap(); err != nil {
 		panic(err)
 	}

@@ -293,20 +293,20 @@ func (h *LbankApi) FrozenCurrency() ([]string, error) {
 	}
 	var currencies []string
 	for _, v := range data {
-		vo,err := v.Object()
+		vo, err := v.Object()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse object")
 		}
-		currency,err := vo.GetString("assetCode")
+		currency, err := vo.GetString("assetCode")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse assetCode")
 		}
-		isNotFrozen,err := vo.GetBoolean("canWithDraw")
+		isNotFrozen, err := vo.GetBoolean("canWithDraw")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse canWithDraw")
 		}
 		if !isNotFrozen {
-			currencies = append(currencies,currency)
+			currencies = append(currencies, currency)
 		}
 	}
 	return currencies, nil
@@ -315,7 +315,7 @@ func (h *LbankApi) FrozenCurrency() ([]string, error) {
 func (h *LbankApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	args := url2.Values{}
 	args.Add("symbol", strings.ToLower(trading)+"_"+strings.ToLower(settlement))
-	args.Add("size","60")
+	args.Add("size", "60")
 	method := "/v1/depth.do?" + args.Encode()
 	url := h.publicApiUrl(method)
 	resp, err := h.HttpClient.Get(url)

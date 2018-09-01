@@ -8,10 +8,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/pkg/errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"io"
 )
 
 type ClientMode int
