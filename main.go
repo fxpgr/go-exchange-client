@@ -13,13 +13,15 @@ func main() {
 	fmt.Println(pcli.IsOrderFilled("", ""))
 	fmt.Println(pcli.Order("", "", models.Bid, 0, 0))
 
-	cli, err := public.NewClient("lbank")
+	cli, err := public.NewClient("kucoin")
 	if err != nil {
 		panic(err)
+}
+	if _, err := cli.RateMap(); err != nil {
+		panic(err)
 	}
-	fmt.Println(cli.RateMap())
-	fmt.Println(cli.Rate("EKO","ETH"))
-	board,_ := cli.Board("EKO","ETH")
+	fmt.Println(cli.Rate("ETH", "BTC"))
+	board, _ := cli.Board("ETH", "BTC")
 	fmt.Println(board.BestBidPrice())
 	fmt.Println(board.BestAskPrice())
 

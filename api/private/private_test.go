@@ -103,6 +103,17 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 			m:                 new(sync.Mutex),
 		}
+	case "kucoin":
+		return &KucoinApi{
+			BaseURL:           endpoint,
+			RateCacheDuration: 30 * time.Second,
+			HttpClient:        http.Client{Transport: rt},
+			settlements:       []string{"BTC"},
+			rateMap:           nil,
+			volumeMap:         nil,
+			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			m:                 new(sync.Mutex),
+		}
 	}
 	return nil
 }
@@ -485,5 +496,31 @@ func TestLbankBalances(t *testing.T) {
 
 	if balanceMap["BTC"].Available != 2.0 || balanceMap["BTC"].OnOrders != 1.0 {
 		t.Error("LbankPrivateApi: balance map error")
+	}
+}
+
+func TestKucoinOrder(t *testing.T) {
+	t.Parallel()
+	json := `{
+  "success": true,
+  "code": "OK",
+  "msg": "Operation succeeded.",
+  "data": {
+    "orderOid": "596186ad07015679730ffa02"
+  }
+}`
+	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
+	client := newTestPrivateClient("kucoin", rt)
+	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
+	if err != nil {
+		panic(err)
+	}
+	if orderId != "596186ad07015679730ffa02" {
+		t.Errorf("KucoinPrivateApi: Expected %v. Got %v", "596186ad07015679730ffa02", orderId)
+	}
+	rt.message = ``
+	err = client.CancelOrder(orderId, "BTC_ETH")
+	if err != nil {
+		t.Error(err)
 	}
 }

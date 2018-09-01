@@ -88,6 +88,23 @@ func newTestLbankPublicClient(rt http.RoundTripper) PublicClient {
 	return api
 }
 
+func newTestKucoinPublicClient(rt http.RoundTripper) PublicClient {
+	endpoint := "http://localhost:4243"
+	api := &KucoinApi{
+		BaseURL:           endpoint,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        &http.Client{Transport: rt},
+		rt:                rt,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
+		rateM:             new(sync.Mutex),
+		currencyM:         new(sync.Mutex),
+	}
+	return api
+}
+
 func newTestHuobiPublicClient(rt http.RoundTripper) PublicClient {
 	endpoint := "http://localhost:4243"
 	n := make(map[string]float64)
@@ -519,5 +536,53 @@ func TestLbankVolume(t *testing.T) {
 	}
 	if volume != 1316.3235 {
 		t.Errorf("LbankPublicApi: Expected %v. Got %v", 1316.3235, volume)
+	}
+}
+
+func TestKucoinCurrencyPairs(t *testing.T) {
+	jsonSymbol := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535767843194,"data":{"rates":{"BTC":{"CHF":6830.2,"HRK":45143.13,"MXN":135268.18,"ZAR":103581.54,"INR":498964.2,"CNY":48112.26,"THB":230888.43,"AUD":9791.11,"ILS":25403.72,"KRW":7866332.53,"JPY":781062.6,"PLN":26061.82,"GBP":5429.94,"IDR":104427950.62,"HUF":1982602.74,"PHP":376717.62,"TRY":46570.08,"RUB":476410.82,"HKD":55276.65,"EUR":6071.09,"DKK":45263.97,"USD":7042.5,"CAD":9209.3,"MYR":28994.35,"BGN":11875.76,"NOK":59050.69,"RON":28150.98,"SGD":9663.78,"CZK":156494.56,"SEK":64504.61,"NZD":10644.31,"BRL":29078.04},"ETH":{"CHF":275.79,"HRK":1822.81,"MXN":5461.93,"ZAR":4182.47,"INR":20147.47,"CNY":1942.7,"THB":9322.95,"AUD":395.35,"ILS":1025.76,"KRW":317631.49,"JPY":31538.21,"PLN":1052.34,"GBP":219.25,"IDR":4216654.44,"HUF":80054.72,"PHP":15211.33,"TRY":1880.43,"RUB":19236.8,"HKD":2231.99,"EUR":245.14,"DKK":1827.69,"USD":284.36,"CAD":371.85,"MYR":1170.75,"BGN":479.52,"NOK":2384.38,"RON":1136.69,"SGD":390.21,"CZK":6319.03,"SEK":2604.6,"NZD":429.8,"BRL":1174.13},"NEO":{"CHF":20.02,"HRK":132.35,"MXN":396.6,"ZAR":303.7,"INR":1462.96,"CNY":141.06,"THB":676.96,"AUD":28.7,"ILS":74.48,"KRW":23064.08,"JPY":2290.07,"PLN":76.41,"GBP":15.92,"IDR":306182.75,"HUF":5812.99,"PHP":1104.53,"TRY":136.54,"RUB":1396.83,"HKD":162.07,"EUR":17.8,"DKK":132.71,"USD":20.64,"CAD":27,"MYR":85.01,"BGN":34.81,"NOK":173.13,"RON":82.53,"SGD":28.33,"CZK":458.84,"SEK":189.12,"NZD":31.2,"BRL":85.25},"USDT":{"CHF":0.969855,"HRK":6.410101,"MXN":19.20741,"ZAR":14.708065,"INR":70.850437,"CNY":6.831702,"THB":32.78501,"AUD":1.39029,"ILS":3.607202,"KRW":1116.980125,"JPY":110.907008,"PLN":3.70065,"GBP":0.771025,"IDR":14828.25,"HUF":281.519736,"PHP":53.49203,"TRY":6.61272,"RUB":67.64797,"HKD":7.84901,"EUR":0.862065,"DKK":6.42726,"USD":1,"CAD":1.307675,"MYR":4.117055,"BGN":1.6863,"NOK":8.384905,"RON":3.9973,"SGD":1.37221,"CZK":22.22145,"SEK":9.159335,"NZD":1.51144,"BRL":4.128938},"KCS":{"CHF":1.37,"HRK":9.07,"MXN":27.19,"ZAR":20.82,"INR":100.32,"CNY":9.67,"THB":46.42,"AUD":1.96,"ILS":5.1,"KRW":1581.6,"JPY":157.04,"PLN":5.23,"GBP":1.09,"IDR":20996.28,"HUF":398.62,"PHP":75.74,"TRY":9.36,"RUB":95.78,"HKD":11.11,"EUR":1.22,"DKK":9.1,"USD":1.41,"CAD":1.85,"MYR":5.82,"BGN":2.38,"NOK":11.87,"RON":5.66,"SGD":1.94,"CZK":31.46,"SEK":12.96,"NZD":2.14,"BRL":5.84}},"currencies":[["USD","$"],["EUR","€"],["AUD","$"],["CAD","$"],["CHF","CHF"],["CNY","¥"],["GBP","£"],["JPY","¥"],["NZD","$"],["BGN","лв."],["BRL","R$"],["CZK","Kč"],["DKK","kr"],["HKD","$"],["HRK","kn"],["HUF","Ft"],["IDR","Rp"],["ILS","₪"],["INR","₹"],["KRW","₩"],["MXN","$"],["MYR","RM"],["NOK","kr"],["PHP","₱"],["PLN","zł"],["RON","lei"],["RUB","₽"],["SEK","kr"],["SGD","$"],["THB","฿"],["TRY","₺"],["ZAR","R"]]}}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonSymbol, status: http.StatusOK}
+	client := newTestKucoinPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonSymbol
+	_, err := client.CurrencyPairs()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestKucoinBoard(t *testing.T) {
+	jsonBoard := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535769125940,"data":{"SELL":[[0.0404363,0.7201,0.02911818],[0.04043634,11.6367234,0.4705465],[0.04045573,0.6,0.02427344],[0.04045598,0.6,0.02427359],[0.04045673,0.6,0.02427404],[0.04045773,0.6,0.02427464]],"BUY":[[0.04033898,1.8021205,0.0726957],[0.04033888,0.0519972,0.00209751],[0.04033865,129.1818407,5.21102106],[0.04033698,14.18,0.57197838],[0.04031739,0.6,0.02419043],[0.04031639,0.6,0.02418983]],"timestamp":1535769125198}}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonBoard, status: http.StatusOK}
+	client := newTestKucoinPublicClient(fakeRoundTripper)
+	fakeRoundTripper.message = jsonBoard
+	_, err := client.Board("EOS", "ETH")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestKucoinRate(t *testing.T) {
+	jsonTicker := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535768321674,"data":[{"coinType":"ETH","trading":true,"symbol":"ETH-BTC","lastDealPrice":0.04033865,"buy":0.04033865,"sell":0.04042767,"change":0.00015153,"coinTypePair":"BTC","sort":100,"feeRate":0.001,"volValue":157.34520663,"plus":true,"high":0.04047376,"datetime":1535768316000,"vol":3913.7508371,"low":0.03980003,"changeRate":0.0038},{"coinType":"BTC","trading":true,"symbol":"BTC-USDT","lastDealPrice":7046.111208,"buy":7046.111208,"sell":7052.0,"change":25.35312,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":1588268.48119897,"plus":true,"high":7082.795592,"datetime":1535768316000,"vol":227.88867684,"low":6890.910667,"changeRate":0.0036},{"coinType":"ETH","trading":true,"symbol":"ETH-USDT","lastDealPrice":284.515501,"buy":284.515501,"sell":284.739999,"change":2.805674,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":587362.92606791,"plus":true,"high":285.187344,"datetime":1535768316000,"vol":2093.9763169,"low":276.911658,"changeRate":0.01}]}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonTicker, status: http.StatusOK}
+	client := newTestKucoinPublicClient(fakeRoundTripper)
+	rate, err := client.Rate("ETH", "BTC")
+	if err != nil {
+		t.Error(err)
+	}
+	if rate != 0.04033865 {
+		t.Errorf("LbankPublicApi: Expected %v. Got %v", 0.04033865, rate)
+	}
+}
+
+func TestKucoinVolume(t *testing.T) {
+	jsonTicker := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535768321674,"data":[{"coinType":"ETH","trading":true,"symbol":"ETH-BTC","lastDealPrice":0.04033865,"buy":0.04033865,"sell":0.04042767,"change":0.00015153,"coinTypePair":"BTC","sort":100,"feeRate":0.001,"volValue":157.34520663,"plus":true,"high":0.04047376,"datetime":1535768316000,"vol":3913.7508371,"low":0.03980003,"changeRate":0.0038},{"coinType":"BTC","trading":true,"symbol":"BTC-USDT","lastDealPrice":7046.111208,"buy":7046.111208,"sell":7052.0,"change":25.35312,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":1588268.48119897,"plus":true,"high":7082.795592,"datetime":1535768316000,"vol":227.88867684,"low":6890.910667,"changeRate":0.0036},{"coinType":"ETH","trading":true,"symbol":"ETH-USDT","lastDealPrice":284.515501,"buy":284.515501,"sell":284.739999,"change":2.805674,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":587362.92606791,"plus":true,"high":285.187344,"datetime":1535768316000,"vol":2093.9763169,"low":276.911658,"changeRate":0.01}]}`
+	fakeRoundTripper := &FakeRoundTripper{message: jsonTicker, status: http.StatusOK}
+	client := newTestKucoinPublicClient(fakeRoundTripper)
+	vol, err := client.Volume("ETH", "BTC")
+	if err != nil {
+		t.Error(err)
+	}
+	if vol != 3913.7508371 {
+		t.Errorf("LbankPublicApi: Expected %v. Got %v", 3913.7508371, vol)
 	}
 }

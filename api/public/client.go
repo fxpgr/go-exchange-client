@@ -53,6 +53,8 @@ func NewClient(exchangeName string) (PublicClient, error) {
 		return NewCobinhoodPublicApi()
 	case "lbank":
 		return NewLbankPublicApi()
+	case "kucoin":
+		return NewKucoinPublicApi()
 	}
 	return nil, errors.New("failed to init exchange api")
 }

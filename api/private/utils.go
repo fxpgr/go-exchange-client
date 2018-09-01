@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"io"
 )
 
 type ClientMode int
@@ -50,6 +51,13 @@ type transferResponse struct {
 }
 type cancelOrderResponse struct {
 	Success int `json:"success"`
+}
+
+func computeHmac256(message, secret string) string {
+	key := []byte(secret)
+	h := hmac.New(sha256.New, key)
+	io.WriteString(h, message)
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 func GetMd5HashSign(query string) (string, error) {
