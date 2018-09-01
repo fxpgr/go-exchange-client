@@ -108,16 +108,6 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch result of command %s", command)
 	}
-
-	var errres errorResponse
-	err = json.Unmarshal(resBody, &errres)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse response")
-	}
-	if errres.Error != nil {
-		return nil, errors.Errorf("server returns error '%s'", *errres.Error)
-	}
-
 	return resBody, nil
 }
 
@@ -129,17 +119,15 @@ type poloniexFeeRate struct {
 func (p *PoloniexApi) fetchRate() error {
 	p.rateMap = make(map[string]map[string]float64)
 	p.volumeMap = make(map[string]map[string]float64)
-	url := p.baseUrl() + "/returnTicker"
-
+	url := p.baseUrl() + "/public?command=returnTicker"
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
-
 	json, err := jason.NewObjectFromReader(resp.Body)
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
+		return errors.Wrapf(err, "failed to parse json from reader")
 	}
 
 	rateMap := json.Map()
@@ -202,21 +190,23 @@ func (p *PoloniexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
 		err := p.fetchRate()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err,"aa")
 		}
 		p.rateLastUpdated = now
 	}
 	bs, err := p.privateApi("returnFeeInfo", nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err,"bb")
 	}
+	fmt.Println(fmt.Sprintf("%s", bs))
+
 	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err,"cc")
 	}
 	makerFeeString, err := json.GetString("makerFee")
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err,"dd")
 	}
 	makerFee, err := strconv.ParseFloat(makerFeeString, 10)
 	if err != nil {

@@ -69,7 +69,6 @@ func (p *PoloniexApi) fetchRate() error {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
-
 	json, err := jason.NewObjectFromReader(resp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")

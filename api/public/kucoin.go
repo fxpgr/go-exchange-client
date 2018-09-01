@@ -168,51 +168,42 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		return h.currencyPairs, nil
 	}
 	h.fetchSettlements()
-	var sets string
-	for _, s := range h.settlements {
-		sets += s + ","
-	}
-	sets = strings.TrimRight(sets, ",")
-	url := h.publicApiUrl("/v1/open/currencies") + "?coins=" + sets
+	currecyPairs := make([]models.CurrencyPair,0)
+	url := h.publicApiUrl("/v1/open/tick")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+		return nil,errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil,errors.Wrapf(err, "failed to parse json")
 	}
-	data, err := json.GetObject("data")
+	data, err := json.GetObjectArray("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil,errors.Wrapf(err, "failed to parse json")
 	}
-	rates, err := data.GetObject("rates")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	var pairs []models.CurrencyPair
-	for k, v := range rates.Map() {
-		settlement := k
-		vo, err := v.Object()
+	for _, v := range data {
+		trading, err := v.GetString("coinType")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse object")
+			continue
 		}
-		for trading, _ := range vo.Map() {
-			pair := models.CurrencyPair{
-				Trading:    strings.ToUpper(trading),
-				Settlement: strings.ToUpper(settlement),
-			}
-			pairs = append(pairs, pair)
+		settlement, err := v.GetString("coinTypePair")
+		if err != nil {
+			continue
 		}
+		currecyPairs = append(currecyPairs,models.CurrencyPair{
+			Trading:trading,
+			Settlement:settlement,
+		})
 	}
-	h.currencyPairs = pairs
-	return pairs, nil
+	h.currencyPairs = currecyPairs
+	return currecyPairs, nil
 }
 
 func (h *KucoinApi) Volume(trading string, settlement string) (float64, error) {
