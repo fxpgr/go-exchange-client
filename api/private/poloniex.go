@@ -129,7 +129,7 @@ type poloniexFeeRate struct {
 func (p *PoloniexApi) fetchRate() error {
 	p.rateMap = make(map[string]map[string]float64)
 	p.volumeMap = make(map[string]map[string]float64)
-	url := p.baseUrl() + "returnTicker"
+	url := p.baseUrl() + "/returnTicker"
 
 	resp, err := p.HttpClient.Get(url)
 	if err != nil {
