@@ -8,6 +8,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"github.com/patrickmn/go-cache"
 )
 
 type FakeRoundTripper struct {
@@ -77,6 +78,7 @@ func newTestLbankPublicClient(rt http.RoundTripper) PublicClient {
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        &http.Client{Transport: rt},
+		boardCache:cache.New(15*time.Second, 5*time.Second),
 		rt:                rt,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -94,6 +96,7 @@ func newTestKucoinPublicClient(rt http.RoundTripper) PublicClient {
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        &http.Client{Transport: rt},
+		boardCache:cache.New(15*time.Second, 5*time.Second),
 		rt:                rt,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -123,6 +126,7 @@ func newTestHuobiPublicClient(rt http.RoundTripper) PublicClient {
 		rateMap:           m,
 		volumeMap:         k,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		boardCache:cache.New(15*time.Second, 5*time.Second),
 		m:                 new(sync.Mutex),
 		rateM:             new(sync.Mutex),
 		currencyM:         new(sync.Mutex),
