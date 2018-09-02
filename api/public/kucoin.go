@@ -74,9 +74,22 @@ type KucoinTickResponse struct {
 	err        error
 }
 
+func requestGetAsChrome(url string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return req, err
+	}
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; MAFSJS; rv:11.0) like Gecko")
+	return req, err
+}
+
 func (h *KucoinApi) fetchRate() error {
 	url := h.publicApiUrl("/v1/open/tick")
-	resp, err := h.HttpClient.Get(url)
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -170,7 +183,11 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	h.fetchSettlements()
 	currecyPairs := make([]models.CurrencyPair, 0)
 	url := h.publicApiUrl("/v1/open/tick")
-	resp, err := h.HttpClient.Get(url)
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -254,7 +271,11 @@ func (h *KucoinApi) Rate(trading string, settlement string) (float64, error) {
 
 func (h *KucoinApi) FrozenCurrency() ([]string, error) {
 	url := h.publicApiUrl("/v1/market/open/coins")
-	resp, err := h.HttpClient.Get(url)
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
 	if err != nil {
 		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
 	}
@@ -298,7 +319,11 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	args.Add("symbol", strings.ToUpper(trading)+"-"+strings.ToUpper(settlement))
 	args.Add("group", "1")
 	url := h.publicApiUrl("/v1/open/orders?") + args.Encode()
-	resp, err := h.HttpClient.Get(url)
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
