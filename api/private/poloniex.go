@@ -190,23 +190,23 @@ func (p *PoloniexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
 		err := p.fetchRate()
 		if err != nil {
-			return nil, errors.Wrap(err,"aa")
+			return nil, errors.Wrap(err, "aa")
 		}
 		p.rateLastUpdated = now
 	}
 	bs, err := p.privateApi("returnFeeInfo", nil)
 	if err != nil {
-		return nil, errors.Wrap(err,"bb")
+		return nil, errors.Wrap(err, "bb")
 	}
 	fmt.Println(fmt.Sprintf("%s", bs))
 
 	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
-		return nil, errors.Wrap(err,"cc")
+		return nil, errors.Wrap(err, "cc")
 	}
 	makerFeeString, err := json.GetString("makerFee")
 	if err != nil {
-		return nil, errors.Wrap(err,"dd")
+		return nil, errors.Wrap(err, "dd")
 	}
 	makerFee, err := strconv.ParseFloat(makerFeeString, 10)
 	if err != nil {

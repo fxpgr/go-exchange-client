@@ -168,25 +168,25 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		return h.currencyPairs, nil
 	}
 	h.fetchSettlements()
-	currecyPairs := make([]models.CurrencyPair,0)
+	currecyPairs := make([]models.CurrencyPair, 0)
 	url := h.publicApiUrl("/v1/open/tick")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	data, err := json.GetObjectArray("data")
 	if err != nil {
-		return nil,errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	for _, v := range data {
 		trading, err := v.GetString("coinType")
@@ -197,9 +197,9 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		if err != nil {
 			continue
 		}
-		currecyPairs = append(currecyPairs,models.CurrencyPair{
-			Trading:trading,
-			Settlement:settlement,
+		currecyPairs = append(currecyPairs, models.CurrencyPair{
+			Trading:    trading,
+			Settlement: settlement,
 		})
 	}
 	h.currencyPairs = currecyPairs
@@ -253,7 +253,7 @@ func (h *KucoinApi) Rate(trading string, settlement string) (float64, error) {
 }
 
 func (h *KucoinApi) FrozenCurrency() ([]string, error) {
-	url := h.publicApiUrl("/v1/open/tick")
+	url := h.publicApiUrl("/v1/market/open/coins")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
@@ -274,16 +274,19 @@ func (h *KucoinApi) FrozenCurrency() ([]string, error) {
 	}
 	var frozenCurrencies []string
 	for _, v := range data {
-		isEnabled, err := v.GetBoolean("trading")
+		enableWithdraw, err := v.GetBoolean("enableWithdraw")
 		if err != nil {
 			return []string{}, errors.Wrapf(err, "failed to parse isTrading")
 		}
-
-		trading, err := v.GetString("coinType")
+		enableDeposit, err := v.GetBoolean("enableDeposit")
+		if err != nil {
+			return []string{}, errors.Wrapf(err, "failed to parse isTrading")
+		}
+		trading, err := v.GetString("coin")
 		if err != nil {
 			return []string{}, errors.Wrapf(err, "failed to parse object")
 		}
-		if !isEnabled {
+		if !enableWithdraw || !enableDeposit {
 			frozenCurrencies = append(frozenCurrencies, trading)
 		}
 	}
