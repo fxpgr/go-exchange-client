@@ -7,6 +7,7 @@ import (
 
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	url2 "net/url"
@@ -19,13 +20,12 @@ const (
 
 func NewLbankPublicApi() (*LbankApi, error) {
 	api := &LbankApi{
-		BaseURL:                    LBANK_BASE_URL,
-		RateCacheDuration:          30 * time.Second,
-		rateMap:                    nil,
-		volumeMap:                  nil,
-		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
-		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		BaseURL:           LBANK_BASE_URL,
+		RateCacheDuration: 30 * time.Second,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		boardCache:        cache.New(15*time.Second, 5*time.Second),
 
 		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
 		rt:         &http.Transport{},
@@ -39,14 +39,13 @@ func NewLbankPublicApi() (*LbankApi, error) {
 }
 
 type LbankApi struct {
-	BaseURL                    string
-	RateCacheDuration          time.Duration
-	rateLastUpdated            time.Time
-	volumeMap                  map[string]map[string]float64
-	rateMap                    map[string]map[string]float64
-	currencyPairs              []models.CurrencyPair
-	CurrencyPairsCacheDuration time.Duration
-	currencyPairsLastUpdated   time.Time
+	BaseURL           string
+	RateCacheDuration time.Duration
+	rateLastUpdated   time.Time
+	volumeMap         map[string]map[string]float64
+	rateMap           map[string]map[string]float64
+	currencyPairs     []models.CurrencyPair
+	boardCache        *cache.Cache
 
 	HttpClient *http.Client
 	rt         http.RoundTripper
@@ -313,6 +312,10 @@ func (h *LbankApi) FrozenCurrency() ([]string, error) {
 }
 
 func (h *LbankApi) Board(trading string, settlement string) (board *models.Board, err error) {
+	c, found := h.boardCache.Get(trading + "_" + settlement)
+	if found {
+		return c.(*models.Board), nil
+	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToLower(trading)+"_"+strings.ToLower(settlement))
 	args.Add("size", "60")
@@ -384,5 +387,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 		Bids: bids,
 		Asks: asks,
 	}
+	h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
+
 	return board, nil
 }

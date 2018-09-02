@@ -13,6 +13,7 @@ func main() {
 	fmt.Println(cli.CurrencyPairs())
 	fmt.Println(cli.Rate("ETH", "BTC"))
 	board, _ := cli.Board("ETH", "BTC")
+	board, _ = cli.Board("ETH", "BTC")
 	fmt.Println(board.BestBidPrice())
 	fmt.Println(board.BestAskPrice())
 
