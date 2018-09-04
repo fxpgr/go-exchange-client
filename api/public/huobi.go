@@ -128,6 +128,7 @@ func (h *HuobiApi) fetchRate() error {
 			resp, err := cli.Get(url)
 			if err != nil {
 				ch <- &HuobiTickResponse{nil, trading, settlement, err}
+				<-workers
 				return
 			}
 			defer resp.Body.Close()
