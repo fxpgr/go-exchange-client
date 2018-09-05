@@ -20,14 +20,14 @@ const (
 
 func NewHuobiPublicApi() (*HuobiApi, error) {
 	api := &HuobiApi{
-		BaseURL:                    HUOBI_BASE_URL,
-		RateCacheDuration:          30 * time.Second,
-		rateMap:                    nil,
-		volumeMap:                  nil,
-		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		BaseURL:           HUOBI_BASE_URL,
+		RateCacheDuration: 30 * time.Second,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
-		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
-		rt:         &http.Transport{},
+		HttpClient:        &http.Client{Timeout: time.Duration(5) * time.Second},
+		rt:                &http.Transport{},
 
 		m:         new(sync.Mutex),
 		rateM:     new(sync.Mutex),
@@ -38,12 +38,12 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 }
 
 type HuobiApi struct {
-	BaseURL                    string
-	RateCacheDuration          time.Duration
-	rateLastUpdated            time.Time
-	volumeMap                  map[string]map[string]float64
-	rateMap                    map[string]map[string]float64
-	currencyPairs              []models.CurrencyPair
+	BaseURL           string
+	RateCacheDuration time.Duration
+	rateLastUpdated   time.Time
+	volumeMap         map[string]map[string]float64
+	rateMap           map[string]map[string]float64
+	currencyPairs     []models.CurrencyPair
 	boardCache        *cache.Cache
 
 	HttpClient *http.Client

@@ -15,7 +15,7 @@ func main() {
 		panic(err)
 	}
 	counter := 0
-	for _,c := range cs {
+	for _, c := range cs {
 		_, err := cli.Board(c.Trading, c.Settlement)
 		if err != nil {
 			fmt.Println(counter)
@@ -24,6 +24,5 @@ func main() {
 		}
 		counter++
 	}
-
 
 }

@@ -337,7 +337,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 	}
 	jsonBids, err := json.GetValueArray("bids")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json bids %s %s %s",json, trading,settlement)
+		return nil, errors.Wrapf(err, "failed to parse json bids %s %s %s", json, trading, settlement)
 	}
 	jsonAsks, err := json.GetValueArray("asks")
 	if err != nil {
