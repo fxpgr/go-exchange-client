@@ -9,6 +9,7 @@ import (
 	"github.com/Jeffail/gabs"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
+	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"strings"
@@ -28,6 +29,8 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		boardCache:        cache.New(3*time.Second, 1*time.Second),
+		HttpClient:        &http.Client{Timeout: time.Duration(5) * time.Second},
 
 		m: new(sync.Mutex),
 	}
@@ -41,7 +44,8 @@ type HitbtcApi struct {
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
 	rateLastUpdated   time.Time
-	HttpClient        http.Client
+	boardCache        *cache.Cache
+	HttpClient        *http.Client
 
 	settlements []string
 
@@ -315,6 +319,10 @@ func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
 }
 
 func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Board, err error) {
+	c, found := h.boardCache.Get(trading + "_" + settlement)
+	if found {
+		return c.(*models.Board), nil
+	}
 	url := h.publicApiUrl("orderbook/" + trading + settlement)
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
@@ -390,5 +398,6 @@ func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Boar
 		Bids: bids,
 		Asks: asks,
 	}
+	h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
 	return board, nil
 }

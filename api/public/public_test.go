@@ -62,7 +62,8 @@ func newTestHitbtcPublicClient(rt http.RoundTripper) PublicClient {
 	api := &HitbtcApi{
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
-		HttpClient:        http.Client{Transport: rt},
+		HttpClient:        &http.Client{Transport: rt},
+		boardCache:        cache.New(15*time.Second, 5*time.Second),
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
