@@ -25,7 +25,7 @@ func NewLbankPublicApi() (*LbankApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		boardCache:        cache.New(15*time.Second, 5*time.Second),
+		boardCache:        cache.New(3*time.Second, 1*time.Second),
 
 		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
 		rt:         &http.Transport{},
@@ -337,7 +337,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 	}
 	jsonBids, err := json.GetValueArray("bids")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json bids")
+		return nil, errors.Wrapf(err, "failed to parse json bids %s %s %s",json, trading,settlement)
 	}
 	jsonAsks, err := json.GetValueArray("asks")
 	if err != nil {

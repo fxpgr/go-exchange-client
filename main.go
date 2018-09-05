@@ -6,15 +6,24 @@ import (
 )
 
 func main() {
-	cli, err := public.NewClient("kucoin")
+	cli, err := public.NewClient("lbank")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(cli.CurrencyPairs())
-	fmt.Println(cli.Rate("ETH", "BTC"))
-	board, _ := cli.Board("ETH", "BTC")
-	board, _ = cli.Board("ETH", "BTC")
-	fmt.Println(board.BestBidPrice())
-	fmt.Println(board.BestAskPrice())
+	cs, err := cli.CurrencyPairs()
+	if err != nil {
+		panic(err)
+	}
+	counter := 0
+	for _,c := range cs {
+		_, err := cli.Board(c.Trading, c.Settlement)
+		if err != nil {
+			fmt.Println(counter)
+			fmt.Println(err)
+			continue
+		}
+		counter++
+	}
+
 
 }
