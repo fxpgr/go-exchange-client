@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/api/public"
-	"github.com/fxpgr/go-exchange-client/logger"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"strconv"
@@ -238,13 +237,16 @@ func (h *KucoinApi) Balances() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	data, err := json.GetObjectArray("data")
+	data, err := json.GetObject("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data")
+		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+	}
+	datas, err := data.GetObjectArray("datas")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
 	}
 	m := make(map[string]float64)
-	for _, v := range data {
-		logger.Get().Errorf("%v", v)
+	for _, v := range datas {
 		var currency string
 		var balance float64
 		var freeze float64
@@ -252,17 +254,17 @@ func (h *KucoinApi) Balances() (map[string]float64, error) {
 			if k == "coinType" {
 				currency, err = s.String()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data")
+					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
 				}
 			} else if k == "balance" {
 				balance, err = s.Float64()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data")
+					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
 				}
 			} else if k == "freezeBalance" {
 				freeze, err = s.Float64()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data")
+					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
 				}
 			}
 		}
@@ -288,12 +290,16 @@ func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	data, err := json.GetObjectArray("data")
+	data, err := json.GetObject("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data")
+		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+	}
+	datas, err := data.GetObjectArray("datas")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
 	}
 	m := make(map[string]*models.Balance)
-	for _, v := range data {
+	for _, v := range datas {
 		currency, err := v.GetString("coinType")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse json key list1")
