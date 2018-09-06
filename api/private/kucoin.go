@@ -355,11 +355,11 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	}
 	data, err := json.GetObject("data")
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json data")
+		return "", errors.Wrapf(err, "failed to parse json data %s",json)
 	}
 	orderId, err := data.GetString("orderOid")
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json orderId")
+		return "", errors.Wrapf(err, "failed to parse json orderId %s",json)
 	}
 	return orderId, nil
 }
