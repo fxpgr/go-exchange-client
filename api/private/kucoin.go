@@ -345,7 +345,9 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	priceStr := strconv.FormatFloat(price, 'f', 4, 64)
 	params.Set("amount", amountStr)
 	params.Set("price", priceStr)
-	byteArray, err := h.privateApi("POST", "/v1/order?symbol="+strings.ToUpper(fmt.Sprintf("%s-%s", trading, settlement)), params)
+	symbol := strings.ToUpper(fmt.Sprintf("%s-%s", trading, settlement))
+	params.Set("symbol", symbol)
+	byteArray, err := h.privateApi("POST", "/v1/order?symbol="+symbol, params)
 	if err != nil {
 		return "", err
 	}
