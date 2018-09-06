@@ -335,9 +335,9 @@ func (h *KucoinApi) ActiveOrders() ([]*models.Order, error) {
 func (h *KucoinApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
 	params := &url.Values{}
 	if ordertype == models.Ask {
-		params.Set("type", "1")
+		params.Set("type", "SELL")
 	} else if ordertype == models.Bid {
-		params.Set("type", "0")
+		params.Set("type", "BUY")
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
