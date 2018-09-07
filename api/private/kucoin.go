@@ -239,11 +239,11 @@ func (h *KucoinApi) Balances() (map[string]float64, error) {
 	}
 	data, err := json.GetObject("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 	}
 	datas, err := data.GetObjectArray("datas")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 	}
 	m := make(map[string]float64)
 	for _, v := range datas {
@@ -254,17 +254,17 @@ func (h *KucoinApi) Balances() (map[string]float64, error) {
 			if k == "coinType" {
 				currency, err = s.String()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 				}
 			} else if k == "balance" {
 				balance, err = s.Float64()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 				}
 			} else if k == "freezeBalance" {
 				freeze, err = s.Float64()
 				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 				}
 			}
 		}
@@ -292,11 +292,11 @@ func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 	}
 	data, err := json.GetObject("data")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 	}
 	datas, err := data.GetObjectArray("datas")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s",json)
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 	}
 	m := make(map[string]*models.Balance)
 	for _, v := range datas {
@@ -358,11 +358,11 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	}
 	data, err := json.GetObject("data")
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json data %s",json)
+		return "", errors.Wrapf(err, "failed to parse json data %s", json)
 	}
 	orderId, err := data.GetString("orderOid")
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse json orderId %s",json)
+		return "", errors.Wrapf(err, "failed to parse json orderId %s", json)
 	}
 	return orderId, nil
 }
@@ -378,14 +378,14 @@ func (h *KucoinApi) Transfer(typ string, addr string, amount float64, additional
 }
 
 func (h *KucoinApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	params := &url.Values{}
 	params.Set("orderOid", orderNumber)
 	params.Set("symbol", trading+"-"+settlement)
 	if ordertype == models.Ask {
-		params.Set("type","BUY")
+		params.Set("type", "BUY")
 	} else {
-		params.Set("type","SELL")
+		params.Set("type", "SELL")
 	}
 	bs, err := h.privateApi("POST", "/v1/cancel-order", params)
 	if err != nil {
@@ -400,25 +400,25 @@ func (h *KucoinApi) CancelOrder(trading string, settlement string,
 		return errors.Wrapf(err, "failed to parse json %s", json)
 	}
 	if !success {
-		errors.Errorf( "failed to cancel order %s", json)
+		errors.Errorf("failed to cancel order %s", json)
 	}
 	return nil
 }
 
-func (h *KucoinApi) IsOrderFilled(orderNumber string, symbol string) (bool, error) {
+func (h *KucoinApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	params := &url.Values{}
-	params.Set("symbol", symbol)
-	bs, err := h.privateApi("POST", "/v1/order/active", params)
+	params.Set("symbol", trading+"-"+settlement)
+	bs, err := h.privateApi("GET", "/v1/order/active", params)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to cancel order")
 	}
 	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to parse json")
+		return false, errors.Wrapf(err, "failed to parse json %s", json)
 	}
 	data, err := json.GetObject("data")
 	if err != nil {
-		return false, errors.Wrap(err, "failed to parse json")
+		return false, errors.Wrapf(err, "failed to parse json %s", json)
 	}
 	buys, err := data.GetValueArray("BUY")
 	if err != nil {

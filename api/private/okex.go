@@ -393,7 +393,7 @@ func (o *OkexApi) Transfer(typ string, addr string, amount float64, additionalFe
 }
 
 func (o *OkexApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	params := &url.Values{}
 	params.Set("order-id", orderNumber)
 	_, err := o.privateApi("POST", "/v1/order/orders/"+orderNumber+"/submitcancel", params)
@@ -403,7 +403,7 @@ func (o *OkexApi) CancelOrder(trading string, settlement string,
 	return nil
 }
 
-func (o *OkexApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+func (o *OkexApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	params := &url.Values{}
 	params.Set("order-id", orderNumber)
 	bs, err := o.privateApi("POST", "/v1/order/orders/"+orderNumber, params)

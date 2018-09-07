@@ -346,7 +346,7 @@ func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
-func (p *PoloniexApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+func (p *PoloniexApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := p.ActiveOrders()
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get active orders")
@@ -481,7 +481,7 @@ func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, addition
 }
 
 func (p *PoloniexApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	args := make(map[string]string)
 	args["orderNumber"] = orderNumber
 

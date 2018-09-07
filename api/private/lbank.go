@@ -339,7 +339,7 @@ func (h *LbankApi) Transfer(typ string, addr string, amount float64, additionalF
 }
 
 func (h *LbankApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	params := &url.Values{}
 	params.Set("order_id", orderNumber)
 	params.Set("symbol", trading+settlement)
@@ -350,10 +350,10 @@ func (h *LbankApi) CancelOrder(trading string, settlement string,
 	return nil
 }
 
-func (h *LbankApi) IsOrderFilled(orderNumber string, symbol string) (bool, error) {
+func (h *LbankApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	params := &url.Values{}
 	params.Set("order_id", orderNumber)
-	params.Set("symbol", symbol)
+	params.Set("symbol", trading+settlement)
 	bs, err := h.privateApi("POST", "/v1/orders_info.do", params)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to cancel order")

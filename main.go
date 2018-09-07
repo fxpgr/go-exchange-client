@@ -6,7 +6,6 @@ import (
 
 	"github.com/fxpgr/go-arbitrager/infrastructure/config"
 	"github.com/fxpgr/go-exchange-client/api/private"
-	"github.com/fxpgr/go-exchange-client/models"
 )
 
 func main() {
@@ -14,10 +13,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	cfg:=config.ReadConfig("config.yml")
-	privateClient, err := private.NewClient(private.PROJECT,"kucoin",cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
+	cfg := config.ReadConfig("config.yml")
+	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
 	fmt.Println(privateClient.Balances())
-	err = privateClient.CancelOrder("ETH","BTC",models.Ask,"5b92881f9dda152797985c9f")
+	_, err = privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
 	if err != nil {
 		panic(err)
 	}
@@ -25,15 +24,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-/*	counter := 0
-	for _, c := range cs {
-		_, err := cli.Board(c.Trading, c.Settlement)
-		if err != nil {
-			fmt.Println(counter)
-			fmt.Println(err)
-			continue
+	/*	counter := 0
+		for _, c := range cs {
+			_, err := cli.Board(c.Trading, c.Settlement)
+			if err != nil {
+				fmt.Println(counter)
+				fmt.Println(err)
+				continue
+			}
+			counter++
 		}
-		counter++
-	}
-*/
+	*/
 }

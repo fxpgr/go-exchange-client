@@ -20,11 +20,11 @@ type PrivateClient interface {
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
-	IsOrderFilled(string, string) (bool, error)
+	IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error)
 	Order(trading string, settlement string,
 		ordertype models.OrderType, price float64, amount float64) (string, error)
 	CancelOrder(trading string, settlement string,
-		ordertype models.OrderType,	orderNumber string) error
+		ordertype models.OrderType, orderNumber string) error
 	//FilledOrderInfo(orderNumber string) (models.FilledOrderInfo,error)
 	Transfer(typ string, addr string,
 		amount float64, additionalFee float64) error

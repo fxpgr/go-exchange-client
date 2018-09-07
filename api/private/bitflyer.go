@@ -252,7 +252,7 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return completebalancemap, nil
 }
 
-func (b *BitflyerApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+func (b *BitflyerApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := b.ActiveOrders()
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get active orders")
@@ -370,10 +370,10 @@ func (b *BitflyerApi) Transfer(typ string, addr string,
 }
 
 func (b *BitflyerApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	args := make(map[string]string)
 	args["child_order_id"] = orderNumber
-	args["product_code"] = trading+settlement
+	args["product_code"] = trading + settlement
 
 	_, err := b.privateApi("POST", "/v1/me/sendchildorder", args)
 	if err != nil {

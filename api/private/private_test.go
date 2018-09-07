@@ -228,7 +228,7 @@ func TestBitflyerOrder(t *testing.T) {
 	if orderId != "JRF20150707-050237-639234" {
 		t.Errorf("BitflyerPrivateApi: Expected %v. Got %v", "JRF20150707-050237-639234", orderId)
 	}
-	err = client.CancelOrder("BTC","JPY",models.Bid,orderId)
+	err = client.CancelOrder("BTC", "JPY", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -323,7 +323,7 @@ func TestPoloniexOrder(t *testing.T) {
 		t.Errorf("PoloniexPrivateApi: Expected %v. Got %v", "31226040", orderId)
 	}
 	rt.message = `{"success":1}`
-	err = client.CancelOrder("ETH","BTC",models.Bid,orderId)
+	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -428,7 +428,7 @@ func TestHitbtcOrder(t *testing.T) {
 		t.Errorf("HitbtcPrivateApi: Expected %v. Got %v", "d8574207d9e3b16a4a5511753eeef175", orderId)
 	}
 	rt.message = ``
-	err = client.CancelOrder("ETH","BTC",models.Bid,orderId)
+	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -471,7 +471,7 @@ func TestLbankOrder(t *testing.T) {
 		t.Errorf("LbankPrivateApi: Expected %v. Got %v", "123456789", orderId)
 	}
 	rt.message = ``
-	err = client.CancelOrder("ETH","BTC",models.Bid,orderId)
+	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)
 	}
@@ -519,7 +519,7 @@ func TestKucoinOrder(t *testing.T) {
 		t.Errorf("KucoinPrivateApi: Expected %v. Got %v", "596186ad07015679730ffa02", orderId)
 	}
 	rt.message = json
-	err = client.CancelOrder("ETH","BTC",models.Bid,orderId)
+	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)
 	}

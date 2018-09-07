@@ -113,20 +113,20 @@ func (_m *MockPrivateClient) CompleteBalances() (map[string]*models.Balance, err
 	return r0, r1
 }
 
-// IsOrderFilled provides a mock function with given fields: _a0, _a1
-func (_m *MockPrivateClient) IsOrderFilled(_a0 string, _a1 string) (bool, error) {
-	ret := _m.Called(_a0, _a1)
+// IsOrderFilled provides a mock function with given fields: trading, settlement, orderNumber
+func (_m *MockPrivateClient) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
+	ret := _m.Called(trading, settlement, orderNumber)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(string, string) bool); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(string, string, string) bool); ok {
+		r0 = rf(trading, settlement, orderNumber)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(string, string) error); ok {
-		r1 = rf(_a0, _a1)
+	if rf, ok := ret.Get(1).(func(string, string, string) error); ok {
+		r1 = rf(trading, settlement, orderNumber)
 	} else {
 		r1 = ret.Error(1)
 	}

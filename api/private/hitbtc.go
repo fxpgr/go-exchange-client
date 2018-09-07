@@ -276,7 +276,7 @@ func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
-func (h *HitbtcApi) IsOrderFilled(orderNumber string, _ string) (bool, error) {
+func (h *HitbtcApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := h.ActiveOrders()
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to get active orders")
@@ -431,7 +431,7 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 }
 
 func (h *HitbtcApi) CancelOrder(trading string, settlement string,
-	ordertype models.OrderType,	orderNumber string) error {
+	ordertype models.OrderType, orderNumber string) error {
 	args := make(map[string]string)
 	_, err := h.privateApi("DELETE", "/api/2/order/"+orderNumber, args)
 	if err != nil {
