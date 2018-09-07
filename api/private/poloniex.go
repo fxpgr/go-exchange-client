@@ -480,7 +480,8 @@ func (p *PoloniexApi) Transfer(typ string, addr string, amount float64, addition
 	return nil
 }
 
-func (p *PoloniexApi) CancelOrder(orderNumber string, _ string) error {
+func (p *PoloniexApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	args := make(map[string]string)
 	args["orderNumber"] = orderNumber
 

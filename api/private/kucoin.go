@@ -334,20 +334,21 @@ func (h *KucoinApi) ActiveOrders() ([]*models.Order, error) {
 
 func (h *KucoinApi) Order(trading string, settlement string, ordertype models.OrderType, price float64, amount float64) (string, error) {
 	params := &url.Values{}
-	if ordertype == models.Ask {
+	if ordertype == models.Bid {
 		params.Set("type", "SELL")
-	} else if ordertype == models.Bid {
+	} else if ordertype == models.Ask {
 		params.Set("type", "BUY")
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
 	amountStr := strconv.FormatFloat(amount, 'f', 4, 64)
 	priceStr := strconv.FormatFloat(price, 'f', 4, 64)
-	params.Set("amount", amountStr)
 	params.Set("price", priceStr)
+	params.Set("amount", amountStr)
+
 	symbol := strings.ToUpper(fmt.Sprintf("%s-%s", trading, settlement))
 	params.Set("symbol", symbol)
-	byteArray, err := h.privateApi("POST", "/v1/order?symbol="+symbol, params)
+	byteArray, err := h.privateApi("POST", "/v1/order", params)
 	if err != nil {
 		return "", err
 	}
@@ -376,13 +377,30 @@ func (h *KucoinApi) Transfer(typ string, addr string, amount float64, additional
 	return err
 }
 
-func (h *KucoinApi) CancelOrder(orderNumber string, currencyPair string) error {
+func (h *KucoinApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	params := &url.Values{}
-	params.Set("order_id", orderNumber)
-	params.Set("symbol", currencyPair)
-	_, err := h.privateApi("POST", "/v1/cancel-order?symbol="+currencyPair, params)
+	params.Set("orderOid", orderNumber)
+	params.Set("symbol", trading+"-"+settlement)
+	if ordertype == models.Ask {
+		params.Set("type","BUY")
+	} else {
+		params.Set("type","SELL")
+	}
+	bs, err := h.privateApi("POST", "/v1/cancel-order", params)
 	if err != nil {
 		return errors.Wrapf(err, "failed to cancel order")
+	}
+	json, err := jason.NewObjectFromBytes(bs)
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse json %s", json)
+	}
+	success, err := json.GetBoolean("success")
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse json %s", json)
+	}
+	if !success {
+		errors.Errorf( "failed to cancel order %s", json)
 	}
 	return nil
 }

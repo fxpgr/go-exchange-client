@@ -392,7 +392,8 @@ func (h *HuobiApi) Transfer(typ string, addr string, amount float64, additionalF
 	return err
 }
 
-func (h *HuobiApi) CancelOrder(orderNumber string, _ string) error {
+func (h *HuobiApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	params := &url.Values{}
 	params.Set("order-id", orderNumber)
 	_, err := h.privateApi("POST", "/v1/order/orders/"+orderNumber+"/submitcancel", params)

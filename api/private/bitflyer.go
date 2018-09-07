@@ -369,10 +369,11 @@ func (b *BitflyerApi) Transfer(typ string, addr string,
 	return errors.New("bitflyer transfer api not implemented")
 }
 
-func (b *BitflyerApi) CancelOrder(orderNumber string, productCode string) error {
+func (b *BitflyerApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	args := make(map[string]string)
 	args["child_order_id"] = orderNumber
-	args["product_code"] = productCode
+	args["product_code"] = trading+settlement
 
 	_, err := b.privateApi("POST", "/v1/me/sendchildorder", args)
 	if err != nil {

@@ -392,7 +392,8 @@ func (o *OkexApi) Transfer(typ string, addr string, amount float64, additionalFe
 	return err
 }
 
-func (o *OkexApi) CancelOrder(orderNumber string, _ string) error {
+func (o *OkexApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	params := &url.Values{}
 	params.Set("order-id", orderNumber)
 	_, err := o.privateApi("POST", "/v1/order/orders/"+orderNumber+"/submitcancel", params)

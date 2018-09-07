@@ -430,7 +430,8 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 	return err
 }
 
-func (h *HitbtcApi) CancelOrder(orderNumber string, _ string) error {
+func (h *HitbtcApi) CancelOrder(trading string, settlement string,
+	ordertype models.OrderType,	orderNumber string) error {
 	args := make(map[string]string)
 	_, err := h.privateApi("DELETE", "/api/2/order/"+orderNumber, args)
 	if err != nil {

@@ -12,7 +12,7 @@ type TradeFee struct {
 	TakerFee float64
 }
 
-//go:generate mockery -name=PrivateClient
+//go:generate mockery -name=PrivateClient -output=. -inpkg
 type PrivateClient interface {
 	TransferFee() (map[string]float64, error)
 	TradeFeeRates() (map[string]map[string]TradeFee, error)
@@ -23,7 +23,8 @@ type PrivateClient interface {
 	IsOrderFilled(string, string) (bool, error)
 	Order(trading string, settlement string,
 		ordertype models.OrderType, price float64, amount float64) (string, error)
-	CancelOrder(orderNumber string, productCode string) error
+	CancelOrder(trading string, settlement string,
+		ordertype models.OrderType,	orderNumber string) error
 	//FilledOrderInfo(orderNumber string) (models.FilledOrderInfo,error)
 	Transfer(typ string, addr string,
 		amount float64, additionalFee float64) error
@@ -32,7 +33,7 @@ type PrivateClient interface {
 
 func NewClient(mode ClientMode, exchangeName string, apikey string, seckey string) (PrivateClient, error) {
 	if mode == TEST {
-		m := new(PrivateClientMock)
+		m := new(MockPrivateClient)
 		retCompleteBalance := make(map[string]*models.Balance)
 		retCompleteBalance["BTC"] = &models.Balance{Available: 10000, OnOrders: 0}
 		retActiveOrders := make([]*models.Order, 0)
