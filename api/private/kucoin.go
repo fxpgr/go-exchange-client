@@ -438,7 +438,7 @@ func (h *KucoinApi) IsOrderFilled(trading string, settlement string, orderNumber
 			return false, errors.Wrap(err, "failed to parse json")
 		}
 		if orderId == orderNumber {
-			return true, nil
+			return false, nil
 		}
 	}
 	for _, s := range buys {
@@ -451,10 +451,10 @@ func (h *KucoinApi) IsOrderFilled(trading string, settlement string, orderNumber
 			return false, errors.Wrap(err, "failed to parse json")
 		}
 		if orderId == orderNumber {
-			return true, nil
+			return false, nil
 		}
 	}
-	return false, nil
+	return true, nil
 }
 
 func (h *KucoinApi) Address(c string) (string, error) {

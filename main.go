@@ -18,13 +18,15 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(pre)
+	fmt.Println(cli.Board("ETH", "BTC"))
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
 	fmt.Println(privateClient.Balances())
-	_, err = privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
+	filled, err := privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println(filled)
 	_, err = cli.CurrencyPairs()
 	if err != nil {
 		panic(err)

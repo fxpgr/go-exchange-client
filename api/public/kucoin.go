@@ -5,14 +5,15 @@ import (
 	"sync"
 	"time"
 
+	"io/ioutil"
+	url2 "net/url"
+	"strings"
+
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"io/ioutil"
-	url2 "net/url"
-	"strings"
 )
 
 const (
@@ -391,37 +392,15 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json from byte array")
-	}
-	data, err := json.GetObject("data")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json by key tick")
-	}
-	sells, err := data.GetValueArray("SELL")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json bids")
-	}
-	buys, err := data.GetValueArray("BUY")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json asks")
-	}
+	value := gjson.ParseBytes(byteArray)
+	sells := value.Get("data.SELL").Array()
+	buys := value.Get("data.BUY").Array()
+
 	bids := make([]models.BoardOrder, 0)
 	asks := make([]models.BoardOrder, 0)
 	for _, v := range buys {
-		s, err := v.Array()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse array")
-		}
-		price, err := s[0].Float64()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		amount, err := s[1].Float64()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse amount")
-		}
+		price := v.Array()[0].Num
+		amount := v.Array()[1].Num
 		bids = append(bids, models.BoardOrder{
 			Price:  price,
 			Amount: amount,
@@ -429,18 +408,8 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 		})
 	}
 	for _, v := range sells {
-		s, err := v.Array()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse array")
-		}
-		price, err := s[0].Float64()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		amount, err := s[1].Float64()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse amount")
-		}
+		price := v.Array()[0].Num
+		amount := v.Array()[1].Num
 		asks = append(asks, models.BoardOrder{
 			Price:  price,
 			Amount: amount,
