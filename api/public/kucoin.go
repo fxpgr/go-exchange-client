@@ -88,8 +88,8 @@ func (h *KucoinApi) fetchPrecision() error {
 	if h.precisionMap != nil {
 		return nil
 	}
-	h.precisionMap = make(map[string]map[string]models.Precisions)
-	url := h.publicApiUrl("/v1/open/tick")
+	coinPrecision := make(map[string]int)
+	url := h.publicApiUrl("/v1/market/open/coins")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -105,10 +105,28 @@ func (h *KucoinApi) fetchPrecision() error {
 	}
 	value := gjson.Parse(string(byteArray))
 	for _, v := range value.Get("data").Array() {
+		coinPrecision[v.Get("coin").Str] = int(v.Get("tradePrecision").Int())
+	}
+
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+	url = h.publicApiUrl("/v1/open/tick")
+	req, err = requestGetAsChrome(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err = h.HttpClient.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	byteArray, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value = gjson.Parse(string(byteArray))
+	for _, v := range value.Get("data").Array() {
 		trading := v.Get("coinType").Str
 		settlement := v.Get("coinTypePair").Str
-		last := v.Get("lastDealPrice").Raw
-		volume := v.Get("vol").Raw
 
 		m, ok := h.precisionMap[trading]
 		if !ok {
@@ -116,8 +134,8 @@ func (h *KucoinApi) fetchPrecision() error {
 			h.precisionMap[trading] = m
 		}
 		m[settlement] = models.Precisions{
-			PricePrecision:  Precision(last),
-			AmountPrecision: Precision(volume),
+			PricePrecision:  coinPrecision[settlement],
+			AmountPrecision: coinPrecision[trading],
 		}
 	}
 	return errors.Wrapf(err, "failed to fetch %s", url)

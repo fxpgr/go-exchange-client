@@ -13,7 +13,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	pre, err := cli.Precise("ETH", "BTC")
+	pre, err := cli.Precise("PBL", "BTC")
 	if err != nil {
 		panic(err)
 	}
