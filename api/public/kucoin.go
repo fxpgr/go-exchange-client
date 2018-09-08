@@ -139,33 +139,15 @@ func (h *KucoinApi) fetchRate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
-	}
-	data, err := json.GetObjectArray("data")
-	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
-	}
+	value := gjson.ParseBytes(byteArray)
 	rateMap := make(map[string]map[string]float64)
 	volumeMap := make(map[string]map[string]float64)
-	for _, v := range data {
-		trading, err := v.GetString("coinType")
-		if err != nil {
-			continue
-		}
-		settlement, err := v.GetString("coinTypePair")
-		if err != nil {
-			continue
-		}
-		lastf, err := v.GetFloat64("lastDealPrice")
-		if err != nil {
-			continue
-		}
-		volumef, err := v.GetFloat64("vol")
-		if err != nil {
-			continue
-		}
+	for _, v := range value.Get("data").Array() {
+		trading := v.Get("coinType").Str
+		settlement := v.Get("coinTypePair").Str
+
+		lastf := v.Get("lastDealPrice").Num
+		volumef := v.Get("vol").Num
 		h.rateM.Lock()
 		n, ok := volumeMap[trading]
 		if !ok {
