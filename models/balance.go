@@ -11,3 +11,8 @@ func NewBalance(available float64, onOrders float64) *Balance {
 		OnOrders:  onOrders,
 	}
 }
+
+type Precisions struct {
+	PricePrecision  int
+	AmountPrecision int
+}

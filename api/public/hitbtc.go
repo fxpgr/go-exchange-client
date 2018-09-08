@@ -11,6 +11,7 @@ import (
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	"strings"
 )
@@ -43,6 +44,7 @@ type HitbtcApi struct {
 	RateCacheDuration time.Duration
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated   time.Time
 	boardCache        *cache.Cache
 	HttpClient        *http.Client
@@ -96,6 +98,70 @@ func (h *HitbtcApi) fetchSettlements() error {
 		}
 	}
 	h.settlements = uniq
+	return nil
+}
+
+func Precision(numStr string) int {
+	numStrArr := strings.Split(numStr, ".")
+	if len(numStrArr) != 2 {
+		return 0
+	}
+	return len(numStrArr[1])
+}
+
+func (h *HitbtcApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := h.publicApiUrl("ticker")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+
+	for _, v := range value.Array() {
+		pair := v.Get("symbol").Str
+		var settlement string
+		var trading string
+		for _, s := range h.settlements {
+			index := strings.LastIndex(pair, s)
+			if index != 0 && index == len(pair)-len(s) {
+				settlement = s
+				trading = pair[0:index]
+			}
+		}
+		if settlement == "" || trading == "" {
+			continue
+		}
+		last := v.Get("last").Str
+		_, err = strconv.ParseFloat(last, 64)
+		if err != nil {
+			continue
+		}
+		volume := v.Get("volume").Str
+		_, err = strconv.ParseFloat(volume, 64)
+		if err != nil {
+			continue
+		}
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
 	return nil
 }
 
@@ -233,6 +299,21 @@ func (h *HitbtcApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	}
 
 	return pairs, nil
+}
+
+func (h *HitbtcApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
 }
 
 func (h *HitbtcApi) Volume(trading string, settlement string) (float64, error) {

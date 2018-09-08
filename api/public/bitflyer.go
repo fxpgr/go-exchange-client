@@ -13,6 +13,7 @@ import (
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -41,6 +42,7 @@ type BitflyerApi struct {
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
+	precisionMap    map[string]map[string]models.Precisions
 	rateLastUpdated time.Time
 	settlements     []string
 
@@ -116,6 +118,56 @@ func (b *BitflyerApi) fetchRate() error {
 		b.volumeMap[trading] = m
 	}
 	m[settlement] = volume
+
+	return nil
+}
+
+func (b *BitflyerApi) fetchPrecision() error {
+	if b.precisionMap != nil {
+		return nil
+	}
+	b.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := b.publicApiUrl("ticker")
+	resp, err := b.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.ParseBytes(byteArray)
+	pair := value.Get("product_code").Str
+
+	var settlement string
+	var trading string
+	for _, s := range b.settlements {
+		index := strings.LastIndex(pair, s)
+		if index != 0 && index == len(pair)-len(s) {
+			settlement = s
+			trading = strings.Replace(pair[0:index], "_", "", -1)
+		}
+	}
+	if settlement == "" || trading == "" {
+		return errors.New("pair is not parsed")
+	}
+
+	// update rate
+	last := value.Get("ltp").Raw
+	volume := value.Get("volume").Raw
+
+	m, ok := b.precisionMap[trading]
+	if !ok {
+		m = make(map[string]models.Precisions)
+		b.precisionMap[trading] = m
+	}
+	m[settlement] = models.Precisions{
+		PricePrecision:  Precision(last),
+		AmountPrecision: Precision(volume),
+	}
 
 	return nil
 }
@@ -224,6 +276,21 @@ func (b *BitflyerApi) VolumeMap() (map[string]map[string]float64, error) {
 
 func (b *BitflyerApi) FrozenCurrency() ([]string, error) {
 	return []string{}, nil
+}
+
+func (h *BitflyerApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
 }
 
 func (b *BitflyerApi) Board(trading string, settlement string) (board *models.Board, err error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	"net/url"
 	"strings"
@@ -44,6 +45,7 @@ type CobinhoodApi struct {
 	RateCacheDuration          time.Duration
 	volumeMap                  map[string]map[string]float64
 	rateMap                    map[string]map[string]float64
+	precisionMap               map[string]map[string]models.Precisions
 	rateLastUpdated            time.Time
 	currencyPairs              []models.CurrencyPair
 	CurrencyPairsCacheDuration time.Duration
@@ -75,6 +77,49 @@ func (h *CobinhoodApi) fetchSettlements() error {
 		}
 	}
 	h.settlements = uniq
+	return nil
+}
+
+func (h *CobinhoodApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := h.publicApiUrl("/v1/market/tickers")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+
+	for _, v := range value.Get("result.tickers").Array() {
+		last := v.Get("last_trade_price").Str
+		volume := v.Get("24h_volume").Str
+		pairString := v.Get("trading_pair_id").Str
+		currencies := strings.Split(pairString, "-")
+		if len(currencies) != 2 {
+			continue
+		}
+		trading := currencies[0]
+		settlement := currencies[1]
+
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
 	return nil
 }
 
@@ -269,6 +314,21 @@ func (h *CobinhoodApi) Rate(trading string, settlement string) (float64, error) 
 		return 0, errors.Errorf("%s/%s", trading, settlement)
 	} else {
 		return rate, nil
+	}
+}
+
+func (h *CobinhoodApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
 	}
 }
 

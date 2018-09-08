@@ -5,12 +5,15 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	url2 "net/url"
+	"strconv"
 	"strings"
 )
 
@@ -43,6 +46,7 @@ type HuobiApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	currencyPairs     []models.CurrencyPair
 	boardCache        *cache.Cache
 
@@ -105,6 +109,53 @@ type HuobiTickResponse struct {
 	Trading    string
 	Settlement string
 	err        error
+}
+
+func (h *HuobiApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := h.publicApiUrl("/v1/common/symbols")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+
+	value := gjson.Parse(string(byteArray))
+
+	for _, v := range value.Get("data").Array() {
+		pricePrecision, err := strconv.Atoi(v.Get("price-precision").Raw)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		amountPrecision, err := strconv.Atoi(v.Get("amount-precision").Raw)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		trading := strings.ToUpper(v.Get("base-currency").Str)
+		settlement := strings.ToUpper(v.Get("quote-currency").Str)
+
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  pricePrecision,
+			AmountPrecision: amountPrecision,
+		}
+	}
+	return nil
 }
 
 func (h *HuobiApi) fetchRate() error {
@@ -298,6 +349,24 @@ func (h *HuobiApi) Rate(trading string, settlement string) (float64, error) {
 		return 0, errors.Errorf("%s/%s", trading, settlement)
 	} else {
 		return rate, nil
+	}
+}
+
+func (h *HuobiApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	err := h.fetchPrecision()
+	if err != nil {
+		return &models.Precisions{}, err
+	}
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	url2 "net/url"
 	"strings"
@@ -44,6 +45,7 @@ type LbankApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	currencyPairs     []models.CurrencyPair
 	boardCache        *cache.Cache
 
@@ -83,6 +85,50 @@ type LbankTickResponse struct {
 	Trading    string
 	Settlement string
 	err        error
+}
+
+func (h *LbankApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := h.publicApiUrl("/v1/ticker.do") + "?symbol=all"
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+
+	for _, v := range value.Array() {
+		pairString := v.Get("symbol").Str
+		last := v.Get("ticker.latest").Raw
+		volume := v.Get("ticker.vol").Raw
+
+		currencies := strings.Split(pairString, "_")
+		if len(currencies) != 2 {
+			continue
+		}
+		trading := strings.ToUpper(currencies[0])
+		settlement := strings.ToUpper(currencies[1])
+
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
+	return nil
 }
 
 func (h *LbankApi) fetchRate() error {
@@ -177,6 +223,21 @@ func (h *LbankApi) VolumeMap() (map[string]map[string]float64, error) {
 		h.rateLastUpdated = now
 	}
 	return h.volumeMap, nil
+}
+
+func (h *LbankApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
 }
 
 func (h *LbankApi) CurrencyPairs() ([]models.CurrencyPair, error) {

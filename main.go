@@ -13,6 +13,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	pre, err := cli.Precise("ETH", "BTC")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(pre)
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
 	fmt.Println(privateClient.Balances())

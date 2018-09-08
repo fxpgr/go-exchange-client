@@ -21,6 +21,7 @@ type PublicClient interface {
 	VolumeMap() (map[string]map[string]float64, error)
 	FrozenCurrency() ([]string, error)
 	Board(trading string, settlement string) (*models.Board, error)
+	Precise(trading string, settlement string) (*models.Precisions, error)
 }
 
 func NewDefaultClient(exchangeName string) PublicClient {

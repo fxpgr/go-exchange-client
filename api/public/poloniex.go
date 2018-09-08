@@ -12,6 +12,7 @@ import (
 	"github.com/fxpgr/go-exchange-client/logger"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	url2 "net/url"
 )
@@ -49,6 +50,7 @@ type PoloniexApi struct {
 	RateCacheDuration time.Duration
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated   time.Time
 	HttpClient        http.Client
 
@@ -57,6 +59,44 @@ type PoloniexApi struct {
 
 func (p *PoloniexApi) publicApiUrl(command string) string {
 	return p.BaseURL + "/public?command=" + command
+}
+func (p *PoloniexApi) fetchPrecision() error {
+	if p.precisionMap != nil {
+		return nil
+	}
+	p.precisionMap = make(map[string]map[string]models.Precisions)
+	url := p.publicApiUrl("returnTicker")
+
+	resp, err := p.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+	for k, v := range value.Map() {
+		settlement, trading, err := parsePoloCurrencyPair(k)
+		if err != nil {
+			logger.Get().Warn("couldn't parse currency pair", err)
+			continue
+		}
+		last := v.Get("last").Str
+		volume := v.Get("baseVolume").Str
+		m, ok := p.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			p.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
+	return nil
 }
 
 func (p *PoloniexApi) fetchRate() error {
@@ -172,6 +212,21 @@ func (p *PoloniexApi) Volume(trading string, settlement string) (float64, error)
 		return 0, errors.New("settlement volume not found")
 	} else {
 		return volume, nil
+	}
+}
+
+func (h *PoloniexApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
 	}
 }
 

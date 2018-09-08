@@ -9,6 +9,7 @@ import (
 	"github.com/fxpgr/go-exchange-client/models"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	url2 "net/url"
 	"strings"
@@ -43,6 +44,7 @@ type KucoinApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	boardCache        *cache.Cache
 	currencyPairs     []models.CurrencyPair
 
@@ -79,6 +81,45 @@ func requestGetAsChrome(url string) (*http.Request, error) {
 	}
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; MAFSJS; rv:11.0) like Gecko")
 	return req, err
+}
+
+func (h *KucoinApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+	url := h.publicApiUrl("/v1/open/tick")
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+	for _, v := range value.Get("data").Array() {
+		trading := v.Get("coinType").Str
+		settlement := v.Get("coinTypePair").Str
+		last := v.Get("lastDealPrice").Raw
+		volume := v.Get("vol").Raw
+
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
+	return errors.Wrapf(err, "failed to fetch %s", url)
 }
 
 func (h *KucoinApi) fetchRate() error {
@@ -156,6 +197,21 @@ func (h *KucoinApi) RateMap() (map[string]map[string]float64, error) {
 		h.rateLastUpdated = now
 	}
 	return h.rateMap, nil
+}
+
+func (h *KucoinApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
 }
 
 func (h *KucoinApi) VolumeMap() (map[string]map[string]float64, error) {

@@ -8,6 +8,7 @@ import (
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"io/ioutil"
 	url2 "net/url"
 	"strconv"
@@ -45,6 +46,7 @@ type OkexApi struct {
 	rateLastUpdated            time.Time
 	volumeMap                  map[string]map[string]float64
 	rateMap                    map[string]map[string]float64
+	precisionMap               map[string]map[string]models.Precisions
 	currencyPairs              []models.CurrencyPair
 	CurrencyPairsCacheDuration time.Duration
 	currencyPairsLastUpdated   time.Time
@@ -77,6 +79,49 @@ func (h *OkexApi) fetchSettlements() error {
 		}
 	}
 	h.settlements = uniq
+	return nil
+}
+
+func (h *OkexApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+
+	url := h.publicApiUrl("/v2/spot/markets/tickers")
+	resp, err := h.HttpClient.Get(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+
+	for _, v := range value.Get("data").Array() {
+		last := v.Get("last").Str
+		volume := v.Get("volume").Str
+
+		pairString := v.Get("symbol").Str
+		currencies := strings.Split(pairString, "_")
+		if len(currencies) != 2 {
+			continue
+		}
+		trading := currencies[0]
+		settlement := currencies[1]
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  Precision(last),
+			AmountPrecision: Precision(volume),
+		}
+	}
 	return nil
 }
 
@@ -225,6 +270,21 @@ func (h *OkexApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	}
 	h.currencyPairs = pairs
 	return pairs, nil
+}
+
+func (h *OkexApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
 }
 
 func (h *OkexApi) Volume(trading string, settlement string) (float64, error) {
