@@ -501,6 +501,12 @@ func TestLbankBalances(t *testing.T) {
 
 func TestKucoinOrder(t *testing.T) {
 	t.Parallel()
+	jsonPrecision := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535768321674,
+"data":[
+{"withdrawMinFee":0.5,"coinType":"ERC20","withdrawMinAmount":10.0,"withdrawRemark":"","orgAddress":null,"txUrl":"https://etherscan.io/tx/{txId}","userAddressName":null,"withdrawFeeRate":0.001,"confirmationCount":12,"infoUrl":null,"enable":true,"name":"Kucoin Shares","tradePrecision":4,"depositRemark":null,"enableWithdraw":true,"enableDeposit":true,"coin":"BTC"},
+{"withdrawMinFee":0.5,"coinType":"ERC20","withdrawMinAmount":10.0,"withdrawRemark":"","orgAddress":null,"txUrl":"https://etherscan.io/tx/{txId}","userAddressName":null,"withdrawFeeRate":0.001,"confirmationCount":12,"infoUrl":null,"enable":true,"name":"Kucoin Shares","tradePrecision":4,"depositRemark":null,"enableWithdraw":true,"enableDeposit":true,"coin":"ETH"}
+]}`
+
 	json := `{
   "success": true,
   "code": "OK",
@@ -509,8 +515,19 @@ func TestKucoinOrder(t *testing.T) {
     "orderOid": "596186ad07015679730ffa02"
   }
 }`
-	rt := &FakeRoundTripper{message: json, status: http.StatusOK}
-	client := newTestPrivateClient("kucoin", rt)
+	endpoint := "http://localhost:4243"
+	rt := &FakeRoundTripper{message: jsonPrecision, status: http.StatusOK}
+	client :=&KucoinApi{
+		BaseURL:           endpoint,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        http.Client{Transport: rt},
+		settlements:       []string{"BTC"},
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
+	}
+	rt.message = json
 	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
 	if err != nil {
 		panic(err)

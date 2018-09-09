@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"strconv"
 )
 
 type ClientMode int
@@ -20,6 +21,9 @@ const (
 	TEST ClientMode = iota
 	PROJECT
 )
+func FloorFloat64ToStr(num float64, dig int) string {
+	return fmt.Sprintf("%."+strconv.Itoa(dig)+"f", num)
+}
 
 func parseCurrencyPair(s string) (string, string, error) {
 	xs := strings.Split(s, "_")

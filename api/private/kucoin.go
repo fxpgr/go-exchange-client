@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"strconv"
 	"strings"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -70,6 +71,7 @@ type KucoinApi struct {
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
+	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated time.Time
 
 	m *sync.Mutex
@@ -79,8 +81,93 @@ func (h *KucoinApi) privateApiUrl() string {
 	return h.BaseURL
 }
 
-func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
 
+
+func (h *KucoinApi) publicApiUrl(command string) string {
+	return h.BaseURL + command
+}
+
+func requestGetAsChrome(url string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return req, err
+	}
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64; Trident/7.0; MAFSJS; rv:11.0) like Gecko")
+	return req, err
+}
+
+func (h *KucoinApi) fetchPrecision() error {
+	if h.precisionMap != nil {
+		return nil
+	}
+	coinPrecision := make(map[string]int)
+	url := h.publicApiUrl("/v1/market/open/coins")
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.Parse(string(byteArray))
+	for _, v := range value.Get("data").Array() {
+		coinPrecision[v.Get("coin").Str] = int(v.Get("tradePrecision").Int())
+	}
+
+	h.precisionMap = make(map[string]map[string]models.Precisions)
+	url = h.publicApiUrl("/v1/open/tick")
+	req, err = requestGetAsChrome(url)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err = h.HttpClient.Do(req)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	byteArray, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value = gjson.Parse(string(byteArray))
+	for _, v := range value.Get("data").Array() {
+		trading := v.Get("coinType").Str
+		settlement := v.Get("coinTypePair").Str
+
+		m, ok := h.precisionMap[trading]
+		if !ok {
+			m = make(map[string]models.Precisions)
+			h.precisionMap[trading] = m
+		}
+		m[settlement] = models.Precisions{
+			PricePrecision:  coinPrecision[settlement],
+			AmountPrecision: coinPrecision[trading],
+		}
+	}
+	return errors.Wrapf(err, "failed to fetch %s", url)
+}
+
+func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisions, error) {
+	if trading == settlement {
+		return &models.Precisions{}, nil
+	}
+
+	h.fetchPrecision()
+	if m, ok := h.precisionMap[trading]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else if precisions, ok := m[settlement]; !ok {
+		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+	} else {
+		return &precisions, nil
+	}
+}
+func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
 	var urlStr string
 	urlStr = h.BaseURL + path
 	if strings.ToUpper(method) == "GET" {
@@ -341,10 +428,13 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-	amountStr := strconv.FormatFloat(amount, 'f', 4, 64)
-	priceStr := strconv.FormatFloat(price, 'f', 4, 64)
-	params.Set("price", priceStr)
-	params.Set("amount", amountStr)
+	precise , err :=h.precise(trading, settlement)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+
+	params.Set("price", FloorFloat64ToStr(price, precise.PricePrecision))
+	params.Set("amount", FloorFloat64ToStr(amount, precise.AmountPrecision))
 
 	symbol := strings.ToUpper(fmt.Sprintf("%s-%s", trading, settlement))
 	params.Set("symbol", symbol)
