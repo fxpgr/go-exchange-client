@@ -314,49 +314,53 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 }
 
 func (h *KucoinApi) Balances() (map[string]float64, error) {
-	params := &url.Values{}
-	params.Set("limit", "20")
-	byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
-	if err != nil {
-		return nil, err
-	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	data, err := json.GetObject("data")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-	}
-	datas, err := data.GetObjectArray("datas")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-	}
 	m := make(map[string]float64)
-	for _, v := range datas {
-		var currency string
-		var balance float64
-		var freeze float64
-		for k, s := range v.Map() {
-			if k == "coinType" {
-				currency, err = s.String()
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-				}
-			} else if k == "balance" {
-				balance, err = s.Float64()
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-				}
-			} else if k == "freezeBalance" {
-				freeze, err = s.Float64()
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+	for i := 1;i<20;i++ {
+		params := &url.Values{}
+		params.Set("limit", "20")
+		params.Set("page",fmt.Sprintf("%d",i))
+		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
+		if err != nil {
+			return nil, err
+		}
+		json, err := jason.NewObjectFromBytes(byteArray)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json")
+		}
+		data, err := json.GetObject("data")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+		}
+		datas, err := data.GetObjectArray("datas")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+		}
+
+		for _, v := range datas {
+			var currency string
+			var balance float64
+			var freeze float64
+			for k, s := range v.Map() {
+				if k == "coinType" {
+					currency, err = s.String()
+					if err != nil {
+						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+					}
+				} else if k == "balance" {
+					balance, err = s.Float64()
+					if err != nil {
+						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+					}
+				} else if k == "freezeBalance" {
+					freeze, err = s.Float64()
+					if err != nil {
+						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+					}
 				}
 			}
+			currency = strings.ToUpper(currency)
+			m[currency] = balance - freeze
 		}
-		currency = strings.ToUpper(currency)
-		m[currency] = balance - freeze
 	}
 	return m, nil
 }
@@ -367,42 +371,46 @@ type KucoinBalance struct {
 }
 
 func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
-	params := &url.Values{}
-	params.Set("limit", "20")
-	byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
-	if err != nil {
-		return nil, err
-	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	data, err := json.GetObject("data")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-	}
-	datas, err := data.GetObjectArray("datas")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-	}
 	m := make(map[string]*models.Balance)
-	for _, v := range datas {
-		currency, err := v.GetString("coinType")
+	for i := 1;i<20;i++ {
+		params := &url.Values{}
+		params.Set("limit", "20")
+		params.Set("page", fmt.Sprintf("%d", i))
+		params.Set("limit", "20")
+		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key list1")
+			return nil, err
 		}
-		balance, err := v.GetFloat64("balance")
+		json, err := jason.NewObjectFromBytes(byteArray)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key list1")
+			return nil, errors.Wrapf(err, "failed to parse json")
 		}
-		freeze, err := v.GetFloat64("freezeBalance")
+		data, err := json.GetObject("data")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key list1")
+			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 		}
-		currency = strings.ToUpper(currency)
-		m[currency] = &models.Balance{
-			Available: balance - freeze,
-			OnOrders:  freeze,
+		datas, err := data.GetObjectArray("datas")
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+		}
+		for _, v := range datas {
+			currency, err := v.GetString("coinType")
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse json key list1")
+			}
+			balance, err := v.GetFloat64("balance")
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse json key list1")
+			}
+			freeze, err := v.GetFloat64("freezeBalance")
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse json key list1")
+			}
+			currency = strings.ToUpper(currency)
+			m[currency] = &models.Balance{
+				Available: balance - freeze,
+				OnOrders:  freeze,
+			}
 		}
 	}
 	return m, nil
