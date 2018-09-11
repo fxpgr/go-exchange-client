@@ -21,7 +21,9 @@ func main() {
 	fmt.Println(cli.Board("ETH", "BTC"))
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
-	fmt.Println(privateClient.Balances())
+	tradeFeeRates,err:=privateClient.TradeFeeRates()
+	fmt.Println(tradeFeeRates)
+	fmt.Printf("%f",tradeFeeRates["ETH"])
 	filled, err := privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
 	if err != nil {
 		panic(err)

@@ -240,9 +240,14 @@ func (h *KucoinApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse isTrading")
 		}
-		n := make(map[string]TradeFee)
-		n[settlement] = TradeFee{feeRate, feeRate}
-		traderFeeMap[trading] = n
+
+		m, ok := traderFeeMap[trading]
+		if !ok {
+			m = make(map[string]TradeFee)
+			traderFeeMap[trading] = m
+		}
+		m[settlement] = TradeFee{feeRate, feeRate}
+
 	}
 	return traderFeeMap, nil
 }
