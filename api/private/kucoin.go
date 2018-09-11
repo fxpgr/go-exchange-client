@@ -65,7 +65,7 @@ type KucoinApi struct {
 	SecretKey         string
 	BaseURL           string
 	RateCacheDuration time.Duration
-	HttpClient        *http.Client
+	HttpClient        http.Client
 	rt                *http.Transport
 	settlements       []string
 

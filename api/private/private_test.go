@@ -107,7 +107,7 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		return &KucoinApi{
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
-			HttpClient:        &http.Client{Transport: rt},
+			HttpClient:        http.Client{Transport: rt},
 			settlements:       []string{"BTC"},
 			rateMap:           nil,
 			volumeMap:         nil,
@@ -520,7 +520,7 @@ func TestKucoinOrder(t *testing.T) {
 	client :=&KucoinApi{
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
-		HttpClient:        &http.Client{Transport: rt},
+		HttpClient:        http.Client{Transport: rt},
 		settlements:       []string{"BTC"},
 		precisionMap:      precisionMap,
 		rateMap:           nil,
