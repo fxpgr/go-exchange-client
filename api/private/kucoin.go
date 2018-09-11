@@ -376,7 +376,6 @@ func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 		params := &url.Values{}
 		params.Set("limit", "20")
 		params.Set("page", fmt.Sprintf("%d", i))
-		params.Set("limit", "20")
 		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
 		if err != nil {
 			return nil, err
