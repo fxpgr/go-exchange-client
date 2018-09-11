@@ -422,7 +422,6 @@ func (h *HitbtcApi) Transfer(typ string, addr string, amount float64, additional
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse response json %s", string(bs))
 	}
-	fmt.Println(json)
 	_, err = json.GetString("id")
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse response json %s", string(bs))

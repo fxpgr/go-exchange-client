@@ -65,7 +65,7 @@ type KucoinApi struct {
 	SecretKey         string
 	BaseURL           string
 	RateCacheDuration time.Duration
-	HttpClient        http.Client
+	HttpClient        *http.Client
 	rt                *http.Transport
 	settlements       []string
 
@@ -160,9 +160,9 @@ func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisio
 
 	h.fetchPrecision()
 	if m, ok := h.precisionMap[trading]; !ok {
-		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+		return &models.Precisions{}, errors.Errorf("%s/%s missing trading", trading, settlement)
 	} else if precisions, ok := m[settlement]; !ok {
-		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
+		return &models.Precisions{}, errors.Errorf("%s/%s missing settlement", trading, settlement)
 	} else {
 		return &precisions, nil
 	}
@@ -442,7 +442,7 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	}
 	precise , err :=h.precise(trading, settlement)
 	if err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 
 	params.Set("price", FloorFloat64ToStr(price, precise.PricePrecision))

@@ -198,7 +198,6 @@ func (p *PoloniexApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "bb")
 	}
-	fmt.Println(fmt.Sprintf("%s", bs))
 
 	json, err := jason.NewObjectFromBytes(bs)
 	if err != nil {
