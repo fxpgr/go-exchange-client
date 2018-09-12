@@ -482,8 +482,8 @@ func (h *KucoinApi) Transfer(typ string, addr string, amount float64, additional
 func (h *KucoinApi) CancelOrder(trading string, settlement string,
 	ordertype models.OrderType, orderNumber string) error {
 	params := &url.Values{}
-	params.Set("orderOid", orderNumber)
 	params.Set("symbol", trading+"-"+settlement)
+	params.Set("orderOid", orderNumber)
 	if ordertype == models.Ask {
 		params.Set("type", "BUY")
 	} else {
