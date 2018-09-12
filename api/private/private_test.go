@@ -515,9 +515,9 @@ func TestKucoinOrder(t *testing.T) {
 	rt := &FakeRoundTripper{message: jsonPrecision, status: http.StatusOK}
 	precisionMap := make(map[string]map[string]models.Precisions)
 	settlementMap := make(map[string]models.Precisions)
-	settlementMap["BTC"] = models.Precisions{AmountPrecision:4,PricePrecision:8}
+	settlementMap["BTC"] = models.Precisions{AmountPrecision: 4, PricePrecision: 8}
 	precisionMap["ETH"] = settlementMap
-	client :=&KucoinApi{
+	client := &KucoinApi{
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        http.Client{Transport: rt},

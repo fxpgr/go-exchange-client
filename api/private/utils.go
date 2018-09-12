@@ -11,8 +11,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 )
 
 type ClientMode int
@@ -21,6 +21,7 @@ const (
 	TEST ClientMode = iota
 	PROJECT
 )
+
 func FloorFloat64ToStr(num float64, dig int) string {
 	return fmt.Sprintf("%."+strconv.Itoa(dig)+"f", num)
 }

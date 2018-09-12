@@ -14,9 +14,9 @@ import (
 	"github.com/fxpgr/go-exchange-client/api/public"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
+	"github.com/tidwall/gjson"
 	"strconv"
 	"strings"
-	"github.com/tidwall/gjson"
 )
 
 const (
@@ -71,7 +71,7 @@ type KucoinApi struct {
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
-	precisionMap      map[string]map[string]models.Precisions
+	precisionMap    map[string]map[string]models.Precisions
 	rateLastUpdated time.Time
 
 	m *sync.Mutex
@@ -80,8 +80,6 @@ type KucoinApi struct {
 func (h *KucoinApi) privateApiUrl() string {
 	return h.BaseURL
 }
-
-
 
 func (h *KucoinApi) publicApiUrl(command string) string {
 	return h.BaseURL + command
@@ -320,10 +318,10 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 
 func (h *KucoinApi) Balances() (map[string]float64, error) {
 	m := make(map[string]float64)
-	for i := 1;i<20;i++ {
+	for i := 1; i < 20; i++ {
 		params := &url.Values{}
 		params.Set("limit", "20")
-		params.Set("page",fmt.Sprintf("%d",i))
+		params.Set("page", fmt.Sprintf("%d", i))
 		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
 		if err != nil {
 			return nil, err
@@ -377,7 +375,7 @@ type KucoinBalance struct {
 
 func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 	m := make(map[string]*models.Balance)
-	for i := 1;i<20;i++ {
+	for i := 1; i < 20; i++ {
 		params := &url.Values{}
 		params.Set("limit", "20")
 		params.Set("page", fmt.Sprintf("%d", i))
@@ -440,7 +438,7 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-	precise , err :=h.precise(trading, settlement)
+	precise, err := h.precise(trading, settlement)
 	if err != nil {
 		return "", err
 	}

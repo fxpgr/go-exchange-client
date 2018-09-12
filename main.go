@@ -18,14 +18,11 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(pre)
-	board,_ := cli.Board("ETH", "BTC")
-	fmt.Println(board.BestAskPrice(),board.BestBidPrice())
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
-	tradeFeeRates,err:=privateClient.TradeFeeRates()
+	tradeFeeRates, err := privateClient.TradeFeeRates()
 	fmt.Println(tradeFeeRates)
 	fmt.Println(tradeFeeRates["ETH"]["BTC"])
-	fmt.Printf("%s",1-tradeFeeRates["PBL"]["BTC"].TakerFee)
 	filled, err := privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
 	if err != nil {
 		panic(err)
