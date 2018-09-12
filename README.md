@@ -58,13 +58,15 @@ func main() {
 | Okex      | Done        | Done     | Done            | Done   | Done             | Done    |
 | Cobinhood | Done        | Done     | Done            | Done   | Done             | Done    |
 | Lbank     | Done        | Done     | Done            | Done   | Done             | Done    |
+| Kucoin    | Done        | Done     | Done            | Done   | Done             | Done    |
 
 ## PrivateAPI
 
-|          | Order() | CancelOrder() | SellFeeRate() | PurchaseFeeRate() | Balances() | CompleteBalances() | ActiveOrders() | TransferFee() | Transfer() | Address() |
-|----------|---------|---------------|---------------|-------------------|------------|--------------------|----------------|---------------|------------|-----------|
-| Bitflyer | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
-| Poloniex | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
-| Hitbtc   | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
-| Huobi    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
-| Lbank    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      |
+|          | Order() | CancelOrder() | SellFeeRate() | PurchaseFeeRate() | Balances() | CompleteBalances() | ActiveOrders() | TransferFee() | Transfer() | Address() | Precise() |
+|----------|---------|---------------|---------------|-------------------|------------|--------------------|----------------|---------------|------------|-----------|-----------|
+| Bitflyer | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
+| Poloniex | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
+| Hitbtc   | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
+| Huobi    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
+| Lbank    | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
+| Kucoin   | Done    | Done          | Done          | Done              | Done       | Done               | Done           | Done          | Done       | Done      | Done      |
