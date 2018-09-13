@@ -6,6 +6,8 @@ import (
 
 	"github.com/fxpgr/go-arbitrager/infrastructure/config"
 	"github.com/fxpgr/go-exchange-client/api/private"
+	"github.com/fxpgr/go-exchange-client/models"
+	"time"
 )
 
 func main() {
@@ -20,12 +22,13 @@ func main() {
 	fmt.Println(pre)
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
-	fmt.Println(privateClient.CompleteBalance("LOOM"))
-	filled, err := privateClient.IsOrderFilled("ETH", "BTC", "5b92881f9dda152797985c9f")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(filled)
+
+	t := time.Now()
+	fmt.Println(privateClient.Order("LOOM", "BTC", models.Bid, 100000000000, 100))
+	fmt.Println(time.Now().Sub(t))
+	t = time.Now()
+	fmt.Println(privateClient.Order("LOOM", "BTC", models.Bid, 100000000000, 100))
+	fmt.Println(time.Now().Sub(t))
 	_, err = cli.CurrencyPairs()
 	if err != nil {
 		panic(err)

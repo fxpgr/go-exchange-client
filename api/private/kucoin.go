@@ -166,8 +166,7 @@ func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisio
 	}
 }
 func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
-	var urlStr string
-	urlStr = h.BaseURL + path
+	urlStr := h.BaseURL + path
 	if strings.ToUpper(method) == "GET" {
 		urlStr = urlStr + "?" + params.Encode()
 	}
@@ -185,18 +184,16 @@ func (h *KucoinApi) privateApi(method string, path string, params *url.Values) (
 	strForSign := fmt.Sprintf("%s/%v/%s", path, nonce, params.Encode())
 	signatureStr := base64.StdEncoding.EncodeToString([]byte(strForSign))
 	signature := computeHmac256(signatureStr, h.SecretKey)
-	req.Header.Add("KC-API-KEY", h.ApiKey)
-	req.Header.Add("KC-API-NONCE", fmt.Sprintf("%v", nonce))
-	req.Header.Add(
+	req.Header.Set("KC-API-KEY", h.ApiKey)
+	req.Header.Set("KC-API-NONCE", fmt.Sprintf("%v", nonce))
+	req.Header.Set(
 		"KC-API-SIGNATURE", signature,
 	)
-
 	res, err := h.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request command %s", path)
 	}
 	defer res.Body.Close()
-
 	resBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch result of command %s", path)
@@ -420,13 +417,13 @@ func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 
 func (h *KucoinApi) CompleteBalance(coin string) (*models.Balance, error) {
 	params := &url.Values{}
-	params.Set("coin",coin)
-	url := fmt.Sprintf("/v1/account/%s/balance",coin)
+	params.Set("coin", coin)
+	url := fmt.Sprintf("/v1/account/%s/balance", coin)
 	byteArray, err := h.privateApi("GET", url, params)
 	if err != nil {
 		return nil, err
 	}
-	value :=gjson.ParseBytes(byteArray)
+	value := gjson.ParseBytes(byteArray)
 	balance := value.Get("data.balance").Num
 	freeze := value.Get("data.freezeBalance").Num
 
@@ -456,11 +453,12 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
+	t := time.Now()
 	precise, err := h.precise(trading, settlement)
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println(time.Now().Sub(t))
 	params.Set("price", FloorFloat64ToStr(price, precise.PricePrecision))
 	params.Set("amount", FloorFloat64ToStr(amount, precise.AmountPrecision))
 
@@ -470,6 +468,7 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	if err != nil {
 		return "", err
 	}
+
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to parse json object")
