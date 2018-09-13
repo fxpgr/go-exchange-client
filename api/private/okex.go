@@ -335,6 +335,65 @@ func (o *OkexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (o *OkexApi) CompleteBalance(coin string) (*models.Balance, error) {
+	accountId, err := o.getAccountId()
+	if err != nil {
+		return nil, err
+	}
+	params := &url.Values{}
+	params.Set("account-id", accountId)
+	byteArray, err := o.privateApi("GET", "/v1/account/accounts/"+accountId+"/balance", params)
+	if err != nil {
+		return nil, err
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	data, err := json.GetObject("data")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data")
+	}
+	balances, err := data.GetObjectArray("list")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	m := make(map[string]*models.Balance)
+	var previousCurrency string
+	previousBalance := &models.Balance{}
+	var available float64
+	for _, v := range balances {
+		currency, err := v.GetString("currency")
+		if err != nil {
+			continue
+		}
+		t, err := v.GetString("type")
+		if err != nil {
+			continue
+		}
+		availableStr, err := v.GetString("balance")
+		if err != nil {
+			continue
+		}
+		available, err = strconv.ParseFloat(availableStr, 10)
+		if err != nil {
+			return nil, err
+		}
+		if previousCurrency != "" && previousCurrency != currency {
+			m[previousCurrency] = previousBalance
+			previousCurrency = currency
+			previousBalance = &models.Balance{}
+		}
+		if t == "trade" {
+			previousBalance.Available = available
+		} else {
+			previousBalance.OnOrders = available
+		}
+		previousCurrency = currency
+	}
+	return m[coin], nil
+}
+
 type OkexActiveOrderResponse struct {
 	response   []byte
 	Trading    string

@@ -276,6 +276,52 @@ func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (h *HitbtcApi) CompleteBalance(coin string) (*models.Balance, error) {
+	bs, err := h.privateApi("GET", "/api/2/trading/balance", nil)
+	if err != nil {
+		return nil, err
+	}
+	json, err := gabs.ParseJSON(bs)
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+
+	rateMap, err := json.Children()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	m := make(map[string]*models.Balance)
+	for _, v := range rateMap {
+		currency, ok := v.Path("currency").Data().(string)
+		if !ok {
+			continue
+		}
+		if currency != coin {
+			continue
+		}
+		availableStr, ok := v.Path("available").Data().(string)
+		if !ok {
+			continue
+		}
+		available, err := strconv.ParseFloat(availableStr, 10)
+		if err != nil {
+			return nil, err
+		}
+		reservedStr, ok := v.Path("reserved").Data().(string)
+		if !ok {
+			continue
+		}
+		reserved, err := strconv.ParseFloat(reservedStr, 10)
+		if err != nil {
+			return nil, err
+		}
+		balance := models.NewBalance(available, reserved)
+		m[currency] = balance
+	}
+	return m[coin], nil
+}
+
 func (h *HitbtcApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := h.ActiveOrders()
 	if err != nil {

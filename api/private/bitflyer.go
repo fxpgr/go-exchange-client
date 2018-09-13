@@ -252,6 +252,50 @@ func (b *BitflyerApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return completebalancemap, nil
 }
 
+func (b *BitflyerApi) CompleteBalance(coin string) (*models.Balance, error) {
+	balancepath := "/v1/me/getbalance"
+	method := "GET"
+
+	resBody, err := b.privateApi(method, balancepath, map[string]string{})
+	if err != nil {
+		return nil, err
+	}
+	balances, err := jason.NewValueFromBytes(resBody)
+	if err != nil {
+		return nil, err
+	}
+
+	balanceArray, err := balances.Array()
+	if err != nil {
+		return nil, err
+	}
+	completebalancemap := make(map[string]*models.Balance)
+
+	for i := range balanceArray {
+		balanceObject, err := balanceArray[i].Object()
+		if err != nil {
+			return nil, err
+		}
+
+		balancetmpmap := balanceObject.Map()
+		cur, err := balancetmpmap["currency_code"].String()
+		if err != nil {
+			return nil, err
+		}
+		avi, err := balancetmpmap["available"].Float64()
+		if err != nil {
+			return nil, err
+		}
+		amount, err := balancetmpmap["amount"].Float64()
+		if err != nil {
+			return nil, err
+		}
+		completeBalance := models.NewBalance(avi, amount-avi)
+		completebalancemap[cur] = completeBalance
+	}
+	return completebalancemap[coin], nil
+}
+
 func (b *BitflyerApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := b.ActiveOrders()
 	if err != nil {

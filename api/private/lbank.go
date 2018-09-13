@@ -286,6 +286,59 @@ func (h *LbankApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (h *LbankApi) CompleteBalance(coin string) (*models.Balance, error) {
+	params := &url.Values{}
+	byteArray, err := h.privateApi("POST", "/v1/user_info.do", params)
+	if err != nil {
+		return nil, err
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	data, err := json.GetObject("info")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data")
+	}
+	frees, err := data.GetObject("free")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key list")
+	}
+	frozens, err := data.GetObject("freeze")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key list")
+	}
+	m := make(map[string]*models.Balance)
+	for currency, v := range frees.Map() {
+		if strings.ToUpper(currency) != coin {
+			continue
+		}
+		available, err := v.Float64()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json key list 1")
+		}
+		currency = strings.ToUpper(currency)
+		m[currency] = &models.Balance{Available: available}
+	}
+	for currency, v := range frozens.Map() {
+		if strings.ToUpper(currency) != coin {
+			continue
+		}
+		frozen, err := v.Float64()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse json key list 3")
+		}
+		currency = strings.ToUpper(currency)
+		_, ok := m[currency]
+		if ok {
+			m[currency].OnOrders = frozen
+		} else {
+			m[currency] = &models.Balance{OnOrders: frozen}
+		}
+	}
+	return m[coin], nil
+}
+
 type LbankActiveOrderResponse struct {
 	response   []byte
 	Trading    string

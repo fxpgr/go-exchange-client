@@ -410,12 +410,30 @@ func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 			}
 			currency = strings.ToUpper(currency)
 			m[currency] = &models.Balance{
-				Available: balance - freeze,
+				Available: balance,
 				OnOrders:  freeze,
 			}
 		}
 	}
 	return m, nil
+}
+
+func (h *KucoinApi) CompleteBalance(coin string) (*models.Balance, error) {
+	params := &url.Values{}
+	params.Set("coin",coin)
+	url := fmt.Sprintf("/v1/account/%s/balance",coin)
+	byteArray, err := h.privateApi("GET", url, params)
+	if err != nil {
+		return nil, err
+	}
+	value :=gjson.ParseBytes(byteArray)
+	balance := value.Get("data.balance").Num
+	freeze := value.Get("data.freezeBalance").Num
+
+	return &models.Balance{
+		Available: balance,
+		OnOrders:  freeze,
+	}, nil
 }
 
 type KucoinActiveOrderResponse struct {

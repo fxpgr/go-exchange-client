@@ -345,6 +345,54 @@ func (p *PoloniexApi) CompleteBalances() (map[string]*models.Balance, error) {
 	return m, nil
 }
 
+func (p *PoloniexApi) CompleteBalance(coin string) (*models.Balance, error) {
+	bs, err := p.privateApi("returnCompleteBalances", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	json, err := jason.NewObjectFromBytes(bs)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse json")
+	}
+
+	m := make(map[string]*models.Balance)
+	jsonMap := json.Map()
+	for k, v := range jsonMap {
+		if k == coin {
+			continue
+		}
+		balanceObj, err := v.Object()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse %v as object", v)
+		}
+		balanceMap := balanceObj.Map()
+
+		availableStr, err := balanceMap["available"].String()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get available as string")
+		}
+		available, err := strconv.ParseFloat(availableStr, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't parse available(%s) as float64", availableStr)
+		}
+
+		onOrdersStr, err := balanceMap["onOrders"].String()
+		if err != nil {
+			return nil, errors.Wrap(err, "couldn't get onOrders as string")
+		}
+		onOrders, err := strconv.ParseFloat(onOrdersStr, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "couldn't parse onOrders(%s) as float64", onOrdersStr)
+		}
+
+		b := models.NewBalance(available, onOrders)
+		m[k] = b
+	}
+
+	return m[coin], nil
+}
+
 func (p *PoloniexApi) IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error) {
 	orders, err := p.ActiveOrders()
 	if err != nil {

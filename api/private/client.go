@@ -19,6 +19,7 @@ type PrivateClient interface {
 	TradeFeeRate(string, string) (TradeFee, error)
 	Balances() (map[string]float64, error)
 	CompleteBalances() (map[string]*models.Balance, error)
+	CompleteBalance(coin string) (*models.Balance, error)
 	ActiveOrders() ([]*models.Order, error)
 	IsOrderFilled(trading string, settlement string, orderNumber string) (bool, error)
 	Order(trading string, settlement string,
@@ -39,6 +40,7 @@ func NewClient(mode ClientMode, exchangeName string, apikey string, seckey strin
 		retActiveOrders := make([]*models.Order, 0)
 		retTradeFeeRate := TradeFee{MakerFee: 0.002, TakerFee: 0.002}
 		m.On("CompleteBalances").Return(retCompleteBalance, nil)
+		m.On("CompleteBalance").Return(retCompleteBalance["BTC"], nil)
 		m.On("ActiveOrders").Return(retActiveOrders, nil)
 		m.On("IsOrderFilled", mock.Anything, mock.Anything).Return(true, nil)
 		m.On("Order", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("12345", nil)

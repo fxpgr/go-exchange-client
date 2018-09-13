@@ -90,6 +90,29 @@ func (_m *MockPrivateClient) CancelOrder(trading string, settlement string, orde
 	return r0
 }
 
+// CompleteBalance provides a mock function with given fields: coin
+func (_m *MockPrivateClient) CompleteBalance(coin string) (*models.Balance, error) {
+	ret := _m.Called(coin)
+
+	var r0 *models.Balance
+	if rf, ok := ret.Get(0).(func(string) *models.Balance); ok {
+		r0 = rf(coin)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.Balance)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(coin)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CompleteBalances provides a mock function with given fields:
 func (_m *MockPrivateClient) CompleteBalances() (map[string]*models.Balance, error) {
 	ret := _m.Called()
