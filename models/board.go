@@ -17,52 +17,52 @@ type Board struct {
 }
 
 func (b *Board) BestBidAmount() float64 {
-	sort.Slice(b.Bids, func(i, j int) bool {
-		return b.Bids[i].Price > b.Bids[j].Price
-	})
 	if len(b.Bids) == 0 {
 		return 0
 	}
+	sort.Slice(b.Bids, func(i, j int) bool {
+		return b.Bids[i].Price > b.Bids[j].Price
+	})
 	return b.Bids[0].Amount
 }
 
 func (b *Board) BestAskAmount() float64 {
-	sort.Slice(b.Asks, func(i, j int) bool {
-		return b.Asks[i].Price < b.Asks[j].Price
-	})
 	if len(b.Asks) == 0 {
 		return 0
 	}
+	sort.Slice(b.Asks, func(i, j int) bool {
+		return b.Asks[i].Price < b.Asks[j].Price
+	})
 	return b.Asks[0].Amount
 }
 
 func (b *Board) BestBidPrice() float64 {
-	sort.Slice(b.Bids, func(i, j int) bool {
-		return b.Bids[i].Price > b.Bids[j].Price
-	})
 	if len(b.Bids) == 0 {
 		return 0
 	}
+	sort.Slice(b.Bids, func(i, j int) bool {
+		return b.Bids[i].Price > b.Bids[j].Price
+	})
 	return b.Bids[0].Price
 }
 
 func (b *Board) BestAskPrice() float64 {
-	sort.Slice(b.Asks, func(i, j int) bool {
-		return b.Asks[i].Price < b.Asks[j].Price
-	})
 	if len(b.Asks) == 0 {
 		return 0
 	}
+	sort.Slice(b.Asks, func(i, j int) bool {
+		return b.Asks[i].Price < b.Asks[j].Price
+	})
 	return b.Asks[0].Price
 }
 
 func (b *Board) AverageBidRate(amount float64) (float64, error) {
-	sort.Slice(b.Bids, func(i, j int) bool {
-		return b.Bids[i].Price < b.Bids[j].Price
-	})
 	if len(b.Bids) == 0 {
 		return 0, errors.New("there is no bids")
 	}
+	sort.Slice(b.Bids, func(i, j int) bool {
+		return b.Bids[i].Price < b.Bids[j].Price
+	})
 	var sum float64
 	remainingAmount := amount
 	for _, v := range b.Bids {
@@ -78,12 +78,12 @@ func (b *Board) AverageBidRate(amount float64) (float64, error) {
 }
 
 func (b *Board) AverageAskRate(amount float64) (float64, error) {
-	sort.Slice(b.Asks, func(i, j int) bool {
-		return b.Asks[i].Price < b.Asks[j].Price
-	})
 	if len(b.Asks) == 0 {
 		return 0, errors.New("there is no asks")
 	}
+	sort.Slice(b.Asks, func(i, j int) bool {
+		return b.Asks[i].Price < b.Asks[j].Price
+	})
 	var sum float64
 	remainingAmount := amount
 	for _, v := range b.Asks {
