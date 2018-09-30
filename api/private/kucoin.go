@@ -453,12 +453,10 @@ func (h *KucoinApi) Order(trading string, settlement string, ordertype models.Or
 	} else {
 		return "", errors.Errorf("unknown order type %d", ordertype)
 	}
-	t := time.Now()
 	precise, err := h.precise(trading, settlement)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(time.Now().Sub(t))
 	params.Set("price", FloorFloat64ToStr(price, precise.PricePrecision))
 	params.Set("amount", FloorFloat64ToStr(amount, precise.AmountPrecision))
 
