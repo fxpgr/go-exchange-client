@@ -114,6 +114,18 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 			m:                 new(sync.Mutex),
 		}
+	case "binance":
+		return &BinanceApi{
+			BaseURL:           endpoint,
+			RateCacheDuration: 30 * time.Second,
+			HttpClient:        http.Client{Transport: rt},
+			settlements:       []string{"BTC"},
+			rateMap:           nil,
+			volumeMap:         nil,
+			rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+			m:                 new(sync.Mutex),
+			currencyM:         new(sync.Mutex),
+		}
 	}
 	return nil
 }
@@ -537,6 +549,55 @@ func TestKucoinOrder(t *testing.T) {
 		t.Errorf("KucoinPrivateApi: Expected %v. Got %v", "596186ad07015679730ffa02", orderId)
 	}
 	rt.message = json
+	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestBinanceOrder(t *testing.T) {
+	t.Parallel()
+	jsonPrecision := `{"timezone":"UTC","serverTime":1508631584636,"rateLimits":[{"rateLimitType":"REQUESTS_WEIGHT","interval":"MINUTE","limit":1200},{"rateLimitType":"ORDERS","interval":"SECOND","limit":10},{"rateLimitType":"ORDERS","interval":"DAY","limit":100000}],"exchangeFilters":[],"symbols":[{"symbol":"ETHBTC","status":"TRADING","baseAsset":"ETH","baseAssetPrecision":8,"quoteAsset":"BTC","quotePrecision":8,"orderTypes":["LIMIT","MARKET"],"icebergAllowed":false,"filters":[{"filterType":"PRICE_FILTER","minPrice":"0.00000100","maxPrice":"100000.00000000","tickSize":"0.00000100"},{"filterType":"LOT_SIZE","minQty":"0.00100000","maxQty":"100000.00000000","stepSize":"0.00100000"},{"filterType":"MIN_NOTIONAL","minNotional":"0.00100000"}]}]}`
+
+	json := `{
+  "symbol": "ETHBTC",
+  "orderId": 28,
+  "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
+  "origClientOrderId"": "6gCrw2kRUAF9CvJDGP16IP",
+  "transactTime": 1507725176595
+}`
+	jsonCancel := `{
+  "symbol": "ETHBTC",
+  "orderId": 1,
+  "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
+  "origClientOrderId": "6gCrw2kRUAF9CvJDGP16IP"
+}`
+	endpoint := "http://localhost:4243"
+	rt := &FakeRoundTripper{message: jsonPrecision, status: http.StatusOK}
+	precisionMap := make(map[string]map[string]models.Precisions)
+	settlementMap := make(map[string]models.Precisions)
+	settlementMap["BTC"] = models.Precisions{AmountPrecision: 4, PricePrecision: 8}
+	precisionMap["ETH"] = settlementMap
+	client := &BinanceApi{
+		BaseURL:           endpoint,
+		RateCacheDuration: 30 * time.Second,
+		HttpClient:        http.Client{Transport: rt},
+		settlements:       []string{"BTC"},
+		precisionMap:      precisionMap,
+		rateMap:           nil,
+		volumeMap:         nil,
+		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
+		m:                 new(sync.Mutex),
+	}
+	rt.message = json
+	orderId, err := client.Order("ETH", "BTC", models.Bid, 1000000, 0.01)
+	if err != nil {
+		t.Error(err)
+	}
+	if orderId != "6gCrw2kRUAF9CvJDGP16IP" {
+		t.Errorf("BinanceApi: Expected %v. Got %v", "6gCrw2kRUAF9CvJDGP16IP", orderId)
+	}
+	rt.message = jsonCancel
 	err = client.CancelOrder("ETH", "BTC", models.Bid, orderId)
 	if err != nil {
 		t.Error(err)

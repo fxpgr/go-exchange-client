@@ -9,15 +9,19 @@ import (
 )
 
 func main() {
-	cli, err := public.NewClient("kucoin")
+	cli, err := public.NewClient("binance")
 	if err != nil {
 		panic(err)
 	}
-	board, err := cli.Board("PBL", "BTC")
+	board, err := cli.Board("ETH", "BTC")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(board.BestAskPrice())
+	rate, err := cli.Rate("BNB", "BTC")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(rate)
 	cli, err = public.NewClient("huobi")
 	if err != nil {
 		panic(err)
@@ -29,7 +33,7 @@ func main() {
 	fmt.Println(board.BestAskPrice())
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
-	cb,_:=(privateClient.CompleteBalance("BTC"))
+	cb, _ := (privateClient.CompleteBalance("BTC"))
 	fmt.Println(cb.Available)
 	_, err = cli.CurrencyPairs()
 	if err != nil {

@@ -40,6 +40,8 @@ func NewDefaultClient(exchangeName string) PublicClient {
 
 func NewClient(exchangeName string) (PublicClient, error) {
 	switch strings.ToLower(exchangeName) {
+	case "binance":
+		return NewBinancePublicApi()
 	case "bitflyer":
 		return NewBitflyerPublicApi()
 	case "poloniex":

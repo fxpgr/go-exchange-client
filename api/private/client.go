@@ -63,6 +63,8 @@ func NewClient(mode ClientMode, exchangeName string, apikey string, seckey strin
 		return NewLbankApi(apikey, seckey)
 	case "kucoin":
 		return NewKucoinApi(apikey, seckey)
+	case "binance":
+		return NewBinanceApi(apikey, seckey)
 	}
 	return nil, errors.New("failed to init exchange api")
 }
