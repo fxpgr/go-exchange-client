@@ -339,7 +339,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToUpper(trading)+strings.ToUpper(settlement))
-	args.Add("limit", "0")
+	args.Add("limit", "5")
 	url := h.publicApiUrl("/api/v1/depth?") + args.Encode()
 	req, err := requestGetAsChrome(url)
 	if err != nil {
