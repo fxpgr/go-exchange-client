@@ -20,6 +20,8 @@ const (
 )
 
 func NewBinancePublicApi() (*BinanceApi, error) {
+	cli := http.DefaultClient
+	cli.Timeout = 5 * time.Second
 	api := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
@@ -27,7 +29,7 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
-		HttpClient:        &http.Client{Timeout: time.Duration(5) * time.Second},
+		HttpClient:        cli,
 		rt:                &http.Transport{},
 
 		m:         new(sync.Mutex),
