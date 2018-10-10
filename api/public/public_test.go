@@ -120,7 +120,6 @@ func newTestBinancePublicClient(rt http.RoundTripper) PublicClient {
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        &http.Client{Transport: rt},
 		boardCache:        cache.New(15*time.Second, 5*time.Second),
-		rt:                rt,
 		rateMap:           nil,
 		volumeMap:         nil,
 		currencyPairs:     currencyPairs,
