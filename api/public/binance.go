@@ -339,7 +339,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToUpper(trading)+strings.ToUpper(settlement))
-	args.Add("limit", "5")
+	args.Add("limit", "1000")
 	url := h.publicApiUrl("/api/v1/depth?") + args.Encode()
 	req, err := requestGetAsChrome(url)
 	if err != nil {
@@ -356,12 +356,12 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	value := gjson.ParseBytes(byteArray)
-	sells := value.Get("bids").Array()
-	buys := value.Get("asks").Array()
+	bidsArray := value.Get("bids").Array()
+	asksArray := value.Get("asks").Array()
 
 	bids := make([]models.BoardOrder, 0)
 	asks := make([]models.BoardOrder, 0)
-	for _, v := range buys {
+	for _, v := range bidsArray {
 		price := v.Array()[0].Float()
 		amount := v.Array()[1].Float()
 		bids = append(bids, models.BoardOrder{
@@ -370,7 +370,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 			Type:   models.Bid,
 		})
 	}
-	for _, v := range sells {
+	for _, v := range asksArray {
 		price := v.Array()[0].Float()
 		amount := v.Array()[1].Float()
 		asks = append(asks, models.BoardOrder{
