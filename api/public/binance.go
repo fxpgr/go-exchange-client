@@ -21,7 +21,7 @@ const (
 
 func NewBinancePublicApi() (*BinanceApi, error) {
 	cli := http.DefaultClient
-	cli.Timeout = 5 * time.Second
+	cli.Timeout = 10 * time.Second
 	api := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
 		RateCacheDuration: 30 * time.Second,

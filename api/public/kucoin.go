@@ -28,7 +28,7 @@ func NewKucoinPublicApi() (*KucoinApi, error) {
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
-		HttpClient:        &http.Client{Timeout: time.Duration(5) * time.Second},
+		HttpClient:        &http.Client{Timeout: time.Duration(10) * time.Second},
 		rt:                &http.Transport{},
 
 		m:         new(sync.Mutex),

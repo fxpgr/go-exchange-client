@@ -5,21 +5,26 @@ import (
 	"github.com/fxpgr/go-arbitrager/infrastructure/config"
 	"github.com/fxpgr/go-exchange-client/api/private"
 	"github.com/fxpgr/go-exchange-client/api/public"
+	"net/http"
+	"net/url"
 )
 
 func main() {
 
+	proxyUrl, err := url.Parse("http://209.126.120.13:8080")
+	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 	cli, err := public.NewClient("binance")
 	if err != nil {
 		panic(err)
 	}
-	board, err := cli.Board("ETH", "BTC")
+	board, err := cli.Board("DENT", "BTC")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(board)
-	fmt.Println(board.BestBidPrice())
-	fmt.Println(board.BestAskPrice())
+	fmt.Printf("%.16f\n",board.BestBidPrice())
+	fmt.Printf("%.16f\n",board.BestAskPrice())
+	fmt.Printf("%.16f\n",board.BestAskAmount())
+	fmt.Printf("%.16f\n",board.BestBidAmount())
 	cli, err = public.NewClient("huobi")
 	if err != nil {
 		panic(err)
