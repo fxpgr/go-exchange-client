@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	BINANCE_BASE_URL = "https://api.binance.com"
+	BINANCE_BASE_URL = "https://api.marketprotocol.io/proxy/binance"
 )
 
 func NewBinancePublicApi() (*BinanceApi, error) {

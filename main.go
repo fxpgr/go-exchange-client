@@ -2,37 +2,44 @@ package main
 
 import (
 	"fmt"
-	"github.com/fxpgr/go-arbitrager/infrastructure/config"
-	"github.com/fxpgr/go-exchange-client/api/private"
 	"github.com/fxpgr/go-exchange-client/api/public"
-	"net/http"
-	"net/url"
+	"github.com/fxpgr/go-exchange-client/models"
+	"sync"
 )
 
 func main() {
 
-	proxyUrl, err := url.Parse("http://209.126.120.13:8080")
-	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
 	cli, err := public.NewClient("binance")
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
-	board, err := cli.Board("DENT", "BTC")
+	pairs,err:=cli.CurrencyPairs()
 	if err != nil {
+		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Printf("%.16f\n",board.BestBidPrice())
-	fmt.Printf("%.16f\n",board.BestAskPrice())
-	fmt.Printf("%.16f\n",board.BestAskAmount())
-	fmt.Printf("%.16f\n",board.BestBidAmount())
-	cli, err = public.NewClient("huobi")
-	if err != nil {
-		panic(err)
+	zeroCounter := 0
+	wg := &sync.WaitGroup{}
+	for _,pair := range pairs {
+		wg.Add(1)
+		go func(p models.CurrencyPair){
+			defer wg.Done()
+			board, err := cli.Board(p.Trading,p.Settlement)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			if board.BestBidPrice() == 0 {
+				zeroCounter++
+			}
+
+		}(pair)
 	}
-	board, err = cli.Board("ETH", "BTC")
-	if err != nil {
-		panic(err)
-	}
+	wg.Wait()
+	fmt.Printf("%d %d", len(pairs), zeroCounter)
+
+/*
 	cfg := config.ReadConfig("config.yml")
 	privateClient, err := private.NewClient(private.PROJECT, "kucoin", cfg.Kucoin.APIKey, cfg.Kucoin.SecretKey)
 	cb, _ := (privateClient.CompleteBalance("BTC"))
@@ -41,7 +48,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	/*	counter := 0
+		counter := 0
 		for _, c := range cs {
 			_, err := cli.Board(c.Trading, c.Settlement)
 			if err != nil {
