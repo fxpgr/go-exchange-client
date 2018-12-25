@@ -135,6 +135,9 @@ func (h *BinanceApi) fetchRate() error {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	value := gjson.ParseBytes(byteArray)
+	if value.Get("code").String() == "-1003" {
+		return errors.Errorf("ip banned %s", url)
+	}
 	currencyPairs, err := h.CurrencyPairs()
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)

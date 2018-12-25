@@ -10,7 +10,6 @@ import (
 
 func main() {
 	pul:=public.NewProxyUrlList("")
-	http.DefaultTransport = &http.Transport{Proxy: public.RandomProxyUrl(&pul),MaxIdleConnsPerHost: 16}
 
 	cli, err := public.NewClient("binance")
 	if err != nil {
