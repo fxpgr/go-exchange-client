@@ -27,7 +27,7 @@ func NewBitflyerPublicApi() (*BitflyerApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-		HttpClient:        http.Client{Transport:&http.Transport{MaxIdleConnsPerHost: 16}},
+		HttpClient:        http.Client{},
 
 		m: new(sync.Mutex),
 	}
@@ -47,6 +47,11 @@ type BitflyerApi struct {
 	settlements     []string
 
 	m *sync.Mutex
+}
+
+func (h *BitflyerApi)SetTransport(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
 }
 
 func (b *BitflyerApi) publicApiUrl(command string) string {

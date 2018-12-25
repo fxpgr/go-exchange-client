@@ -31,7 +31,7 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
-		HttpClient:        &http.Client{Timeout: time.Duration(5) * time.Second},
+		HttpClient:        &http.Client{},
 
 		m: new(sync.Mutex),
 	}
@@ -53,6 +53,12 @@ type HitbtcApi struct {
 
 	m *sync.Mutex
 	c *HitbtcApiConfig
+}
+
+
+func (h *HitbtcApi)SetTransport(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
 }
 
 func (h *HitbtcApi) publicApiUrl(command string) string {

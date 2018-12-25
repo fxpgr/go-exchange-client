@@ -57,6 +57,12 @@ type PoloniexApi struct {
 	m *sync.Mutex
 }
 
+
+func (p *PoloniexApi)SetTransport(transport http.RoundTripper) error {
+	p.HttpClient.Transport = transport
+	return nil
+}
+
 func (p *PoloniexApi) publicApiUrl(command string) string {
 	return p.BaseURL + "/public?command=" + command
 }
@@ -215,13 +221,13 @@ func (p *PoloniexApi) Volume(trading string, settlement string) (float64, error)
 	}
 }
 
-func (h *PoloniexApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+func (p *PoloniexApi) Precise(trading string, settlement string) (*models.Precisions, error) {
 	if trading == settlement {
 		return &models.Precisions{}, nil
 	}
 
-	h.fetchPrecision()
-	if m, ok := h.precisionMap[trading]; !ok {
+	p.fetchPrecision()
+	if m, ok := p.precisionMap[trading]; !ok {
 		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
 	} else if precisions, ok := m[settlement]; !ok {
 		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)

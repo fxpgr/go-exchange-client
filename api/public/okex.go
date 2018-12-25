@@ -29,7 +29,7 @@ func NewOkexPublicApi() (*OkexApi, error) {
 		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 
-		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
+		HttpClient: &http.Client{},
 		rt:         &http.Transport{},
 
 		m:         new(sync.Mutex),
@@ -61,6 +61,10 @@ type OkexApi struct {
 	currencyM *sync.Mutex
 }
 
+func (h *OkexApi)SetTransport(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
+}
 func (h *OkexApi) publicApiUrl(command string) string {
 	return h.BaseURL + command
 }

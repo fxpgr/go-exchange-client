@@ -30,7 +30,7 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{Timeout: time.Duration(10) * time.Second},
-		rt:                &http.Transport{MaxIdleConns:16},
+		rt:                &http.Transport{},
 
 		m:         new(sync.Mutex),
 		rateM:     new(sync.Mutex),
@@ -58,6 +58,11 @@ type HuobiApi struct {
 	m         *sync.Mutex
 	rateM     *sync.Mutex
 	currencyM *sync.Mutex
+}
+
+func (h *HuobiApi)SetTransport(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
 }
 
 func (h *HuobiApi) publicApiUrl(command string) string {

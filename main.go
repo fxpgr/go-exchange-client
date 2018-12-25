@@ -17,6 +17,7 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
+	cli.SetTransport(&http.Transport{Proxy: public.RandomProxyUrl(&pul),MaxIdleConnsPerHost: 16})
 	_,err=cli.VolumeMap()
 	if err != nil {
 		fmt.Println(err)

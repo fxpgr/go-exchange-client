@@ -3,6 +3,7 @@ package public
 import (
 	"errors"
 	"github.com/fxpgr/go-exchange-client/models"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -22,6 +23,8 @@ type PublicClient interface {
 	FrozenCurrency() ([]string, error)
 	Board(trading string, settlement string) (*models.Board, error)
 	Precise(trading string, settlement string) (*models.Precisions, error)
+
+	SetTransport(transport http.RoundTripper) error
 }
 
 func NewDefaultClient(exchangeName string) PublicClient {

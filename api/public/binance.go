@@ -58,7 +58,7 @@ type BinanceApi struct {
 	currencyM *sync.Mutex
 }
 
-func (h *BinanceApi) SetProxy(transport http.RoundTripper) error {
+func (h *BinanceApi)SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

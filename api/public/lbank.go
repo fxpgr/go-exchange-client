@@ -28,7 +28,7 @@ func NewLbankPublicApi() (*LbankApi, error) {
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 
-		HttpClient: &http.Client{Timeout: time.Duration(5) * time.Second},
+		HttpClient: &http.Client{},
 		rt:         &http.Transport{},
 
 		m:         new(sync.Mutex),
@@ -57,6 +57,12 @@ type LbankApi struct {
 	m         *sync.Mutex
 	rateM     *sync.Mutex
 	currencyM *sync.Mutex
+}
+
+
+func (h *LbankApi)SetTransport(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
 }
 
 func (h *LbankApi) publicApiUrl(command string) string {
