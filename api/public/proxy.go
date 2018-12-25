@@ -23,7 +23,6 @@ func RandomProxyUrl(proxyUrlListGroup *ProxyUrlList) func(*http.Request) (*url.U
 		}
 		rand.Seed(time.Now().UnixNano())
 		i := rand.Intn(len(proxyUrlList))
-		logger.Get().Info(proxyUrlList[i])
 		return proxyUrlList[i], nil
 	}
 }
@@ -45,6 +44,7 @@ type ProxyUrlList struct{
 func(pul *ProxyUrlList) GetList() ([]*url.URL,error) {
 	now := time.Now()
 	if now.Sub(pul.listLastUpdated) >= pul.ListCacheDuration {
+		logger.Get().Info("update proxies")
 		err := pul.fetchList()
 		if err != nil {
 			return pul.urlList, nil
