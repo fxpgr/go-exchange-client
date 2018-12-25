@@ -100,7 +100,12 @@ func (h *BinanceApi) fetchPrecision() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
+
 	value := gjson.ParseBytes(byteArray)
+
+	if value.Get("code").String() == "-1003" {
+		return errors.Errorf("ip banned %s", url)
+	}
 	for _, v := range value.Get("symbols").Array() {
 		trading := v.Get("baseAsset").Str
 		settlement := v.Get("quoteAsset").Str
@@ -243,6 +248,10 @@ func (h *BinanceApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	}
 	currencyPairs := make([]models.CurrencyPair, 0)
 	value := gjson.ParseBytes(byteArray)
+
+	if value.Get("code").String() == "-1003" {
+		return h.currencyPairs,errors.Errorf("ip banned %s", url)
+	}
 	for _, v := range value.Get("symbols").Array() {
 		trading := v.Get("baseAsset").Str
 		settlement := v.Get("quoteAsset").Str
@@ -320,6 +329,10 @@ func (h *BinanceApi) FrozenCurrency() ([]string, error) {
 		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	value := gjson.ParseBytes(byteArray)
+
+	if value.Get("code").String() == "-1003" {
+		return []string{},errors.Errorf("ip banned %s", url)
+	}
 	symbols := value.Get("symbols").Array()
 
 	var frozenCurrencies []string
@@ -365,6 +378,10 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	value := gjson.ParseBytes(byteArray)
+
+	if value.Get("code").String() == "-1003" {
+		return nil,errors.Errorf("ip banned %s", url)
+	}
 	bidsArray := value.Get("bids").Array()
 	asksArray := value.Get("asks").Array()
 
