@@ -59,8 +59,7 @@ type LbankApi struct {
 	currencyM *sync.Mutex
 }
 
-
-func (h *LbankApi)SetTransport(transport http.RoundTripper) error {
+func (h *LbankApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

@@ -59,7 +59,7 @@ type KucoinApi struct {
 	currencyM *sync.Mutex
 }
 
-func (h *KucoinApi)SetTransport(transport http.RoundTripper) error {
+func (h *KucoinApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

@@ -59,8 +59,7 @@ type CobinhoodApi struct {
 	c         *CobinhoodApiConfig
 }
 
-
-func (h *CobinhoodApi)SetTransport(transport http.RoundTripper) error {
+func (h *CobinhoodApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

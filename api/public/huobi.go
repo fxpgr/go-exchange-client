@@ -60,7 +60,7 @@ type HuobiApi struct {
 	currencyM *sync.Mutex
 }
 
-func (h *HuobiApi)SetTransport(transport http.RoundTripper) error {
+func (h *HuobiApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

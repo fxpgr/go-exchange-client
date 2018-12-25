@@ -57,8 +57,7 @@ type PoloniexApi struct {
 	m *sync.Mutex
 }
 
-
-func (p *PoloniexApi)SetTransport(transport http.RoundTripper) error {
+func (p *PoloniexApi) SetTransport(transport http.RoundTripper) error {
 	p.HttpClient.Transport = transport
 	return nil
 }

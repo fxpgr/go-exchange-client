@@ -58,11 +58,10 @@ type BinanceApi struct {
 	currencyM *sync.Mutex
 }
 
-func (h *BinanceApi)SetTransport(transport http.RoundTripper) error {
+func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }
-
 
 func (h *BinanceApi) publicApiUrl(command string) string {
 	return h.BaseURL + command
@@ -250,7 +249,7 @@ func (h *BinanceApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	value := gjson.ParseBytes(byteArray)
 
 	if value.Get("code").String() == "-1003" {
-		return h.currencyPairs,errors.Errorf("ip banned %s", url)
+		return h.currencyPairs, errors.Errorf("ip banned %s", url)
 	}
 	for _, v := range value.Get("symbols").Array() {
 		trading := v.Get("baseAsset").Str
@@ -331,7 +330,7 @@ func (h *BinanceApi) FrozenCurrency() ([]string, error) {
 	value := gjson.ParseBytes(byteArray)
 
 	if value.Get("code").String() == "-1003" {
-		return []string{},errors.Errorf("ip banned %s", url)
+		return []string{}, errors.Errorf("ip banned %s", url)
 	}
 	symbols := value.Get("symbols").Array()
 
@@ -380,7 +379,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	value := gjson.ParseBytes(byteArray)
 
 	if value.Get("code").String() == "-1003" {
-		return nil,errors.Errorf("ip banned %s", url)
+		return nil, errors.Errorf("ip banned %s", url)
 	}
 	bidsArray := value.Get("bids").Array()
 	asksArray := value.Get("asks").Array()

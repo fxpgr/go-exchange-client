@@ -61,7 +61,7 @@ type OkexApi struct {
 	currencyM *sync.Mutex
 }
 
-func (h *OkexApi)SetTransport(transport http.RoundTripper) error {
+func (h *OkexApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

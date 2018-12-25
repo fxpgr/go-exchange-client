@@ -55,8 +55,7 @@ type HitbtcApi struct {
 	c *HitbtcApiConfig
 }
 
-
-func (h *HitbtcApi)SetTransport(transport http.RoundTripper) error {
+func (h *HitbtcApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }

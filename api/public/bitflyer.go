@@ -49,7 +49,7 @@ type BitflyerApi struct {
 	m *sync.Mutex
 }
 
-func (h *BitflyerApi)SetTransport(transport http.RoundTripper) error {
+func (h *BitflyerApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }
