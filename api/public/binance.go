@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	BINANCE_BASE_URL = "https://api.marketprotocol.io/proxy/binance"
+	BINANCE_BASE_URL = "https://api.binance.com"
 )
 
 func NewBinancePublicApi() (*BinanceApi, error) {
@@ -57,6 +57,12 @@ type BinanceApi struct {
 	rateM     *sync.Mutex
 	currencyM *sync.Mutex
 }
+
+func (h *BinanceApi) SetProxy(transport http.RoundTripper) error {
+	h.HttpClient.Transport = transport
+	return nil
+}
+
 
 func (h *BinanceApi) publicApiUrl(command string) string {
 	return h.BaseURL + command
