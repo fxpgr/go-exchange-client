@@ -1,6 +1,7 @@
 package public
 
 import (
+	"fmt"
 	"github.com/fxpgr/go-exchange-client/logger"
 	"io/ioutil"
 	"math/rand"
@@ -12,13 +13,15 @@ import (
 
 func RandomProxyUrl(proxyUrlListGroup ProxyUrlList) func(*http.Request) (*url.URL, error) {
 	proxyUrlList, _ := proxyUrlListGroup.GetList()
+	rand.Seed(time.Now().UnixNano())
 
 	return func(*http.Request) (*url.URL, error) {
 		if len(proxyUrlList) == 0 {
+			fmt.Println("there is no proxy")
 			return nil, nil
 		}
-		rand.Seed(time.Now().UnixNano())
 		i := rand.Intn(len(proxyUrlList))
+		fmt.Println(proxyUrlList[i])
 		return proxyUrlList[i], nil
 	}
 }

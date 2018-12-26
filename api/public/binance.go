@@ -1,6 +1,7 @@
 package public
 
 import (
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -20,8 +21,8 @@ const (
 )
 
 func NewBinancePublicApi() (*BinanceApi, error) {
-	cli := http.DefaultClient
-	cli.Timeout = 10 * time.Second
+	cli := &http.Client{}
+	cli.Timeout = 20 * time.Second
 	api := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
@@ -56,6 +57,7 @@ type BinanceApi struct {
 	m         *sync.Mutex
 	rateM     *sync.Mutex
 	currencyM *sync.Mutex
+	proxy     bool
 }
 
 func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
@@ -63,9 +65,37 @@ func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
 	return nil
 }
 
+func (h *BinanceApi) renewHttpClient() error {
+	rt:=h.HttpClient.Transport
+	h.HttpClient = &http.Client{Transport:rt}
+	return nil
+}
+
 func (h *BinanceApi) publicApiUrl(command string) string {
 	return h.BaseURL + command
 }
+
+func (h *BinanceApi) getRequest(url string) (string, error) {
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer func(){
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	return string(byteArray), err
+}
+
 
 func (h *BinanceApi) fetchSettlements() error {
 	h.settlements = []string{"BTC", "ETH", "NEO", "USDT", "KCS"}
@@ -86,21 +116,12 @@ func (h *BinanceApi) fetchPrecision() error {
 
 	h.precisionMap = make(map[string]map[string]models.Precisions)
 	url := h.publicApiUrl("/api/v1/exchangeInfo")
-	req, err := requestGetAsChrome(url)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	resp, err := h.HttpClient.Do(req)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
-	}
 
-	value := gjson.ParseBytes(byteArray)
+	byteArray, err := h.getRequest(url)
+	if err != nil {
+		return err
+	}
+	value := gjson.Parse(byteArray)
 
 	if value.Get("code").String() == "-1003" {
 		return errors.Errorf("ip banned %s", url)
@@ -124,21 +145,11 @@ func (h *BinanceApi) fetchPrecision() error {
 
 func (h *BinanceApi) fetchRate() error {
 	url := h.publicApiUrl("/api/v1/ticker/24hr")
-	req, err := requestGetAsChrome(url)
+	byteArray, err := h.getRequest(url)
 	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
+		return err
 	}
-	resp, err := h.HttpClient.Do(req)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	value := gjson.ParseBytes(byteArray)
+	value := gjson.Parse(byteArray)
 	if value.Get("code").String() == "-1003" {
 		return errors.Errorf("ip banned %s", url)
 	}
@@ -232,21 +243,12 @@ func (h *BinanceApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		return h.currencyPairs, nil
 	}
 	url := h.publicApiUrl("/api/v1/exchangeInfo")
-	req, err := requestGetAsChrome(url)
+	byteArray, err := h.getRequest(url)
 	if err != nil {
-		return h.currencyPairs, errors.Wrapf(err, "failed to fetch %s", url)
+		return h.currencyPairs, err
 	}
-	resp, err := h.HttpClient.Do(req)
-	if err != nil {
-		return h.currencyPairs, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return h.currencyPairs, errors.Wrapf(err, "failed to fetch %s", url)
-	}
+	value := gjson.Parse(byteArray)
 	currencyPairs := make([]models.CurrencyPair, 0)
-	value := gjson.ParseBytes(byteArray)
 
 	if value.Get("code").String() == "-1003" {
 		return h.currencyPairs, errors.Errorf("ip banned %s", url)
@@ -314,20 +316,12 @@ func (h *BinanceApi) FrozenCurrency() ([]string, error) {
 		return []string{}, nil
 	}
 	url := h.publicApiUrl("/api/v1/exchangeInfo")
-	req, err := requestGetAsChrome(url)
+
+	byteArray, err := h.getRequest(url)
 	if err != nil {
-		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
+		return []string{}, err
 	}
-	resp, err := h.HttpClient.Do(req)
-	if err != nil {
-		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	value := gjson.ParseBytes(byteArray)
+	value := gjson.Parse(byteArray)
 
 	if value.Get("code").String() == "-1003" {
 		return []string{}, errors.Errorf("ip banned %s", url)
@@ -362,21 +356,12 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	args.Add("symbol", strings.ToUpper(trading)+strings.ToUpper(settlement))
 	args.Add("limit", "1000")
 	url := h.publicApiUrl("/api/v1/depth?") + args.Encode()
-	req, err := requestGetAsChrome(url)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	resp, err := h.HttpClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
 
-	byteArray, err := ioutil.ReadAll(resp.Body)
+	byteArray, err := h.getRequest(url)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, err
 	}
-	value := gjson.ParseBytes(byteArray)
+	value := gjson.Parse(byteArray)
 
 	if value.Get("code").String() == "-1003" {
 		return nil, errors.Errorf("ip banned %s", url)

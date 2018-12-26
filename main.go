@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/fxpgr/go-exchange-client/api/public"
 	"github.com/fxpgr/go-exchange-client/models"
+	"net"
 	"net/http"
 	"sync"
+	"time"
 )
 
 func main() {
@@ -16,7 +18,17 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	cli.SetTransport(&http.Transport{Proxy: public.RandomProxyUrl(&pul), MaxIdleConnsPerHost: 16})
+	cli.SetTransport(&http.Transport{
+		Proxy: public.RandomProxyUrl(pul),
+		MaxIdleConns:1,
+		MaxIdleConnsPerHost:1,
+		DialContext: (&net.Dialer{
+			Timeout:   100000 * time.Millisecond,  // 接続タイムアウト時間
+			KeepAlive: 100 * time.Millisecond,  // 1TCP接続あたりの持続時間=keeyAlive
+		}).DialContext,
+		DisableKeepAlives:true,
+		IdleConnTimeout:10*time.Millisecond,
+	})
 	_, err = cli.CurrencyPairs()
 	if err != nil {
 		fmt.Println(err)
@@ -28,6 +40,7 @@ func main() {
 		panic(err)
 	}
 	zeroCounter := 0
+	errCounter := 0
 	wg := &sync.WaitGroup{}
 	for _, pair := range pairs {
 		wg.Add(1)
@@ -35,16 +48,16 @@ func main() {
 			defer wg.Done()
 			board, err := cli.Board(p.Trading, p.Settlement)
 			if err != nil {
-				fmt.Println(err)
+				errCounter++
 				return
 			}
 			if board.BestBidPrice() == 0 {
 				zeroCounter++
 			}
-
 		}(pair)
 	}
 	wg.Wait()
-	fmt.Printf("%d %d", len(pairs), zeroCounter)
+	fmt.Printf("%d %d\n", len(pairs), zeroCounter)
+	fmt.Printf("%d\n", errCounter)
 
 }
