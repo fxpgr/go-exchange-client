@@ -19,15 +19,13 @@ func main() {
 		panic(err)
 	}
 	cli.SetTransport(&http.Transport{
-		Proxy: public.RandomProxyUrl(pul),
-		MaxIdleConns:1,
-		MaxIdleConnsPerHost:1,
+		Proxy:               public.RandomProxyUrl(pul),
+		MaxIdleConns:        20,
+		MaxIdleConnsPerHost: 20,
 		DialContext: (&net.Dialer{
-			Timeout:   100000 * time.Millisecond,  // 接続タイムアウト時間
-			KeepAlive: 100 * time.Millisecond,  // 1TCP接続あたりの持続時間=keeyAlive
+			Timeout:   100000 * time.Millisecond, // 接続タイムアウト時間
+			KeepAlive: 100 * time.Millisecond,    // 1TCP接続あたりの持続時間=keeyAlive
 		}).DialContext,
-		DisableKeepAlives:true,
-		IdleConnTimeout:10*time.Millisecond,
 	})
 	_, err = cli.CurrencyPairs()
 	if err != nil {
@@ -45,7 +43,9 @@ func main() {
 	for _, pair := range pairs {
 		wg.Add(1)
 		go func(p models.CurrencyPair) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+			}()
 			board, err := cli.Board(p.Trading, p.Settlement)
 			if err != nil {
 				errCounter++

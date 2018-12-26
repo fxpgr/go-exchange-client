@@ -1,19 +1,17 @@
 package public
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
-	"io/ioutil"
-	url2 "net/url"
-	"strings"
-
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
+	"io/ioutil"
 )
 
 const (
@@ -35,6 +33,7 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 		m:         new(sync.Mutex),
 		rateM:     new(sync.Mutex),
 		currencyM: new(sync.Mutex),
+		boardM:    new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil
@@ -57,7 +56,7 @@ type BinanceApi struct {
 	m         *sync.Mutex
 	rateM     *sync.Mutex
 	currencyM *sync.Mutex
-	proxy     bool
+	boardM    *sync.Mutex
 }
 
 func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
@@ -66,8 +65,8 @@ func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
 }
 
 func (h *BinanceApi) renewHttpClient() error {
-	rt:=h.HttpClient.Transport
-	h.HttpClient = &http.Client{Transport:rt}
+	rt := h.HttpClient.Transport
+	h.HttpClient = &http.Client{Transport: rt}
 	return nil
 }
 
@@ -84,7 +83,7 @@ func (h *BinanceApi) getRequest(url string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	defer func(){
+	defer func() {
 		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}()
@@ -95,7 +94,6 @@ func (h *BinanceApi) getRequest(url string) (string, error) {
 	}
 	return string(byteArray), err
 }
-
 
 func (h *BinanceApi) fetchSettlements() error {
 	h.settlements = []string{"BTC", "ETH", "NEO", "USDT", "KCS"}
@@ -347,52 +345,80 @@ func (h *BinanceApi) FrozenCurrency() ([]string, error) {
 	return uniq, nil
 }
 
+func (h *BinanceApi) fetchBoard() error {
+	url := h.publicApiUrl("/api/v3/ticker/bookTicker")
+	byteArray, err := h.getRequest(url)
+	if err != nil {
+		return err
+	}
+	value := gjson.Parse(byteArray)
+	if value.Get("code").String() == "-1003" {
+		return errors.Errorf("ip banned %s", url)
+	}
+	currencyPairs, err := h.CurrencyPairs()
+	if err != nil {
+		return errors.Wrapf(err, "failed to fetch %s", url)
+	}
+
+	for _, v := range value.Array() {
+		var trading, settlement string
+		symbol := v.Get("symbol").Str
+		for _, c := range currencyPairs {
+			if symbol == c.Trading+c.Settlement {
+				trading = c.Trading
+				settlement = c.Settlement
+				break
+			}
+		}
+		bids := make([]models.BoardOrder, 0)
+		asks := make([]models.BoardOrder, 0)
+
+		bestBidPricef := v.Get("bidPrice").Float()
+		bestBidAmountf := v.Get("bidQty").Float()
+
+		bids = append(bids, models.BoardOrder{
+			Price:  bestBidPricef,
+			Amount: bestBidAmountf,
+			Type:   models.Bid,
+		})
+
+		bestAskPricef := v.Get("askPrice").Float()
+		bestAskAmountf := v.Get("askQty").Float()
+
+		asks = append(asks, models.BoardOrder{
+			Price:  bestAskPricef,
+			Amount: bestAskAmountf,
+			Type:   models.Ask,
+		})
+		board := &models.Board{
+			Bids: bids,
+			Asks: asks,
+		}
+		h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
+	}
+	return nil
+}
+
+/*duplicated*/
 func (h *BinanceApi) Board(trading string, settlement string) (board *models.Board, err error) {
+	h.boardM.Lock()
+	defer h.boardM.Unlock()
 	c, found := h.boardCache.Get(trading + "_" + settlement)
 	if found {
+		fmt.Println("found")
 		return c.(*models.Board), nil
 	}
-	args := url2.Values{}
-	args.Add("symbol", strings.ToUpper(trading)+strings.ToUpper(settlement))
-	args.Add("limit", "1000")
-	url := h.publicApiUrl("/api/v1/depth?") + args.Encode()
-
-	byteArray, err := h.getRequest(url)
+	fmt.Println("not found")
+	if trading == settlement {
+		return nil, errors.Errorf("trading and settlment are same")
+	}
+	err = h.fetchBoard()
 	if err != nil {
 		return nil, err
 	}
-	value := gjson.Parse(byteArray)
-
-	if value.Get("code").String() == "-1003" {
-		return nil, errors.Errorf("ip banned %s", url)
+	c, found = h.boardCache.Get(trading + "_" + settlement)
+	if !found {
+		return nil, errors.Errorf("cache err")
 	}
-	bidsArray := value.Get("bids").Array()
-	asksArray := value.Get("asks").Array()
-
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
-	for _, v := range bidsArray {
-		price := v.Array()[0].Float()
-		amount := v.Array()[1].Float()
-		bids = append(bids, models.BoardOrder{
-			Price:  price,
-			Amount: amount,
-			Type:   models.Bid,
-		})
-	}
-	for _, v := range asksArray {
-		price := v.Array()[0].Float()
-		amount := v.Array()[1].Float()
-		asks = append(asks, models.BoardOrder{
-			Price:  price,
-			Amount: amount,
-			Type:   models.Ask,
-		})
-	}
-	board = &models.Board{
-		Bids: bids,
-		Asks: asks,
-	}
-	h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
-	return board, nil
+	return c.(*models.Board), nil
 }
