@@ -1,7 +1,6 @@
 package public
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"sync"
@@ -405,10 +404,8 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	defer h.boardM.Unlock()
 	c, found := h.boardCache.Get(trading + "_" + settlement)
 	if found {
-		fmt.Println("found")
 		return c.(*models.Board), nil
 	}
-	fmt.Println("not found")
 	if trading == settlement {
 		return nil, errors.Errorf("trading and settlment are same")
 	}
