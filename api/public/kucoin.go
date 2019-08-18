@@ -94,7 +94,7 @@ func (h *KucoinApi) fetchPrecision() error {
 		return nil
 	}
 	coinPrecision := make(map[string]int)
-	url := h.publicApiUrl("/v1/market/open/coins")
+	url := h.publicApiUrl("/api/v1/currencies")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -110,11 +110,12 @@ func (h *KucoinApi) fetchPrecision() error {
 	}
 	value := gjson.Parse(string(byteArray))
 	for _, v := range value.Get("data").Array() {
-		coinPrecision[v.Get("coin").Str] = int(v.Get("tradePrecision").Int())
+		coinPrecision[v.Get("currency").Str] = int(v.Get("precision").Int())
 	}
 
 	h.precisionMap = make(map[string]map[string]models.Precisions)
-	url = h.publicApiUrl("/v1/open/tick")
+
+	url = h.publicApiUrl("/api/v1/market/allTickers")
 	req, err = requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -128,10 +129,14 @@ func (h *KucoinApi) fetchPrecision() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	value = gjson.Parse(string(byteArray))
-	for _, v := range value.Get("data").Array() {
-		trading := v.Get("coinType").Str
-		settlement := v.Get("coinTypePair").Str
+	value = gjson.ParseBytes(byteArray)
+	for _, v := range value.Get("data.ticker").Array() {
+		currencies := strings.Split(v.Get("symbol").Str, "-")
+		if len(currencies) < 2 {
+			continue
+		}
+		trading := currencies[0]
+		settlement := currencies[1]
 
 		m, ok := h.precisionMap[trading]
 		if !ok {
@@ -147,7 +152,7 @@ func (h *KucoinApi) fetchPrecision() error {
 }
 
 func (h *KucoinApi) fetchRate() error {
-	url := h.publicApiUrl("/v1/open/tick")
+	url := h.publicApiUrl("/api/v1/market/allTickers")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -157,7 +162,6 @@ func (h *KucoinApi) fetchRate() error {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
-
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -165,12 +169,17 @@ func (h *KucoinApi) fetchRate() error {
 	value := gjson.ParseBytes(byteArray)
 	rateMap := make(map[string]map[string]float64)
 	volumeMap := make(map[string]map[string]float64)
-	for _, v := range value.Get("data").Array() {
-		trading := v.Get("coinType").Str
-		settlement := v.Get("coinTypePair").Str
+	for _, v := range value.Get("data.ticker").Array() {
+		currencies := strings.Split(v.Get("symbol").Str, "-")
+		if len(currencies) < 2 {
+			continue
+		}
+		trading := currencies[0]
+		settlement := currencies[1]
 
-		lastf := v.Get("lastDealPrice").Num
-		volumef := v.Get("vol").Num
+		lastf := v.Get("last").Float()
+		volumef := v.Get("vol").Float()
+
 		h.rateM.Lock()
 		n, ok := volumeMap[trading]
 		if !ok {
@@ -242,7 +251,7 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	}
 	h.fetchSettlements()
 	currecyPairs := make([]models.CurrencyPair, 0)
-	url := h.publicApiUrl("/v1/open/tick")
+	url := h.publicApiUrl("/api/v1/symbols")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
@@ -257,6 +266,7 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
+
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
@@ -266,11 +276,11 @@ func (h *KucoinApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	for _, v := range data {
-		trading, err := v.GetString("coinType")
+		trading, err := v.GetString("baseCurrency")
 		if err != nil {
 			continue
 		}
-		settlement, err := v.GetString("coinTypePair")
+		settlement, err := v.GetString("quoteCurrency")
 		if err != nil {
 			continue
 		}
@@ -330,7 +340,7 @@ func (h *KucoinApi) Rate(trading string, settlement string) (float64, error) {
 }
 
 func (h *KucoinApi) FrozenCurrency() ([]string, error) {
-	url := h.publicApiUrl("/v1/market/open/coins")
+	url := h.publicApiUrl("/api/v1/currencies")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return []string{}, errors.Wrapf(err, "failed to fetch %s", url)
@@ -355,15 +365,15 @@ func (h *KucoinApi) FrozenCurrency() ([]string, error) {
 	}
 	var frozenCurrencies []string
 	for _, v := range data {
-		enableWithdraw, err := v.GetBoolean("enableWithdraw")
+		enableWithdraw, err := v.GetBoolean("isWithdrawEnabled")
 		if err != nil {
 			return []string{}, errors.Wrapf(err, "failed to parse isTrading")
 		}
-		enableDeposit, err := v.GetBoolean("enableDeposit")
+		enableDeposit, err := v.GetBoolean("isDepositEnabled")
 		if err != nil {
 			return []string{}, errors.Wrapf(err, "failed to parse isTrading")
 		}
-		trading, err := v.GetString("coin")
+		trading, err := v.GetString("currency")
 		if err != nil {
 			return []string{}, errors.Wrapf(err, "failed to parse object")
 		}
@@ -381,8 +391,7 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToUpper(trading)+"-"+strings.ToUpper(settlement))
-	args.Add("group", "1")
-	url := h.publicApiUrl("/v1/open/orders?") + args.Encode()
+	url := h.publicApiUrl("/api/v1/market/orderbook/level3?") + args.Encode()
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
@@ -398,14 +407,14 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	value := gjson.ParseBytes(byteArray)
-	sells := value.Get("data.SELL").Array()
-	buys := value.Get("data.BUY").Array()
+	sells := value.Get("data.asks").Array()
+	buys := value.Get("data.bids").Array()
 
 	bids := make([]models.BoardOrder, 0)
 	asks := make([]models.BoardOrder, 0)
 	for _, v := range buys {
-		price := v.Array()[0].Num
-		amount := v.Array()[1].Num
+		price := v.Array()[1].Float()
+		amount := v.Array()[2].Float()
 		bids = append(bids, models.BoardOrder{
 			Price:  price,
 			Amount: amount,
@@ -413,8 +422,8 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 		})
 	}
 	for _, v := range sells {
-		price := v.Array()[0].Num
-		amount := v.Array()[1].Num
+		price := v.Array()[1].Float()
+		amount := v.Array()[2].Float()
 		asks = append(asks, models.BoardOrder{
 			Price:  price,
 			Amount: amount,

@@ -10,13 +10,14 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/api/public"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -99,7 +100,7 @@ func (h *KucoinApi) fetchPrecision() error {
 		return nil
 	}
 	coinPrecision := make(map[string]int)
-	url := h.publicApiUrl("/v1/market/open/coins")
+	url := h.publicApiUrl("/api/v1/currencies")
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -115,11 +116,12 @@ func (h *KucoinApi) fetchPrecision() error {
 	}
 	value := gjson.Parse(string(byteArray))
 	for _, v := range value.Get("data").Array() {
-		coinPrecision[v.Get("coin").Str] = int(v.Get("tradePrecision").Int())
+		coinPrecision[v.Get("currency").Str] = int(v.Get("precision").Int())
 	}
 
 	h.precisionMap = make(map[string]map[string]models.Precisions)
-	url = h.publicApiUrl("/v1/open/tick")
+
+	url = h.publicApiUrl("/api/v1/market/allTickers")
 	req, err = requestGetAsChrome(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -133,10 +135,14 @@ func (h *KucoinApi) fetchPrecision() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	value = gjson.Parse(string(byteArray))
-	for _, v := range value.Get("data").Array() {
-		trading := v.Get("coinType").Str
-		settlement := v.Get("coinTypePair").Str
+	value = gjson.ParseBytes(byteArray)
+	for _, v := range value.Get("data.ticker").Array() {
+		currencies := strings.Split(v.Get("symbol").Str, "-")
+		if len(currencies) < 2 {
+			continue
+		}
+		trading := currencies[0]
+		settlement := currencies[1]
 
 		m, ok := h.precisionMap[trading]
 		if !ok {
@@ -202,40 +208,31 @@ func (h *KucoinApi) privateApi(method string, path string, params *url.Values) (
 }
 
 func (h *KucoinApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
-	url := public.KUCOIN_BASE_URL + "/v1/open/tick"
-	resp, err := h.HttpClient.Get(url)
+	url := h.publicApiUrl("/api/v1/market/allTickers")
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
-
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	data, err := json.GetObjectArray("data")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
+	value := gjson.ParseBytes(byteArray)
 	traderFeeMap := make(map[string]map[string]TradeFee)
-	for _, v := range data {
-		trading, err := v.GetString("coinType")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse object")
+	for _, v := range value.Get("data.ticker").Array() {
+		currencies := strings.Split(v.Get("symbol").Str, "-")
+		if len(currencies) < 2 {
+			continue
 		}
-		settlement, err := v.GetString("coinTypePair")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse object")
-		}
-		feeRate, err := v.GetFloat64("feeRate")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse isTrading")
-		}
+		trading := currencies[0]
+		settlement := currencies[1]
 
+		feeRate := 0.001
 		m, ok := traderFeeMap[trading]
 		if !ok {
 			m = make(map[string]TradeFee)
@@ -279,32 +276,36 @@ func (sm *kucoinTransferFeeSyncMap) GetAll() map[string]float64 {
 }
 
 func (h *KucoinApi) TransferFee() (map[string]float64, error) {
-	url := KUCOIN_BASE_URL + "/v1/market/open/coins"
-	resp, err := h.HttpClient.Get(url)
-	transferFeeMap := kucoinTransferFeeSyncMap{make(kucoinTransferFeeMap), new(sync.Mutex)}
+	url := h.publicApiUrl("/api/v1/currencies")
+	req, err := requestGetAsChrome(url)
 	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	defer resp.Body.Close()
 
 	byteArray, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to fetch %s", url)
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := jason.NewObjectFromBytes(byteArray)
 	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 	data, err := json.GetObjectArray("data")
 	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json")
 	}
+	transferFeeMap := kucoinTransferFeeSyncMap{make(kucoinTransferFeeMap), new(sync.Mutex)}
 	for _, v := range data {
 		feef, err := v.GetFloat64("withdrawMinFee")
 		if err != nil {
 			continue
 		}
-		coin, err := v.GetString("coin")
+		coin, err := v.GetString("currency")
 		if err != nil {
 			continue
 		}
@@ -315,52 +316,35 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 
 func (h *KucoinApi) Balances() (map[string]float64, error) {
 	m := make(map[string]float64)
-	for i := 1; i < 20; i++ {
-		params := &url.Values{}
-		params.Set("limit", "20")
-		params.Set("page", fmt.Sprintf("%d", i))
-		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
+	params := &url.Values{}
+	byteArray, err := h.privateApi("GET", "/api/v1/accounts", params)
+	if err != nil {
+		return nil, err
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	data, err := json.GetObjectArray("data")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+	}
+	for _, v := range data {
+		balance, err := v.GetFloat64("balance")
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to parse balance on %s", json)
 		}
-		json, err := jason.NewObjectFromBytes(byteArray)
+		available, err := v.GetFloat64("available")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json")
+			return nil, errors.Wrapf(err, "failed to parse available on %s", json)
 		}
-		data, err := json.GetObject("data")
+		freeze := balance - available
+		currency, err := v.GetString("currency")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+			return nil, errors.Wrapf(err, "failed to parse currency on %s", json)
 		}
-		datas, err := data.GetObjectArray("datas")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-		}
-
-		for _, v := range datas {
-			var currency string
-			var balance float64
-			var freeze float64
-			for k, s := range v.Map() {
-				if k == "coinType" {
-					currency, err = s.String()
-					if err != nil {
-						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-					}
-				} else if k == "balance" {
-					balance, err = s.Float64()
-					if err != nil {
-						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-					}
-				} else if k == "freezeBalance" {
-					freeze, err = s.Float64()
-					if err != nil {
-						return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-					}
-				}
-			}
-			currency = strings.ToUpper(currency)
-			m[currency] = balance - freeze
-		}
+		currency = strings.ToUpper(currency)
+		m[currency] = balance - freeze
 	}
 	return m, nil
 }
@@ -372,65 +356,54 @@ type KucoinBalance struct {
 
 func (h *KucoinApi) CompleteBalances() (map[string]*models.Balance, error) {
 	m := make(map[string]*models.Balance)
-	for i := 1; i < 20; i++ {
-		params := &url.Values{}
-		params.Set("limit", "20")
-		params.Set("page", fmt.Sprintf("%d", i))
-		byteArray, err := h.privateApi("GET", "/v1/account/balances", params)
+	params := &url.Values{}
+	byteArray, err := h.privateApi("GET", "/api/v1/accounts", params)
+	if err != nil {
+		return nil, err
+	}
+	json, err := jason.NewObjectFromBytes(byteArray)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json")
+	}
+	data, err := json.GetObjectArray("data")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+	}
+	for _, v := range data {
+		balance, err := v.GetFloat64("balance")
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to parse balance on %s", json)
 		}
-		json, err := jason.NewObjectFromBytes(byteArray)
+		available, err := v.GetFloat64("available")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json")
+			return nil, errors.Wrapf(err, "failed to parse available on %s", json)
 		}
-		data, err := json.GetObject("data")
+		freeze := balance - available
+		currency, err := v.GetString("currency")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
+			return nil, errors.Wrapf(err, "failed to parse currency on %s", json)
 		}
-		datas, err := data.GetObjectArray("datas")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
-		}
-		for _, v := range datas {
-			currency, err := v.GetString("coinType")
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse json key list1")
-			}
-			balance, err := v.GetFloat64("balance")
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse json key list1")
-			}
-			freeze, err := v.GetFloat64("freezeBalance")
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse json key list1")
-			}
-			currency = strings.ToUpper(currency)
-			m[currency] = &models.Balance{
-				Available: balance,
-				OnOrders:  freeze,
-			}
+		currency = strings.ToUpper(currency)
+		m[currency] = &models.Balance{
+			Available: balance,
+			OnOrders:  freeze,
 		}
 	}
 	return m, nil
 }
 
 func (h *KucoinApi) CompleteBalance(coin string) (*models.Balance, error) {
-	params := &url.Values{}
-	params.Set("coin", coin)
-	url := fmt.Sprintf("/v1/account/%s/balance", coin)
-	byteArray, err := h.privateApi("GET", url, params)
+	completeBalances, err := h.CompleteBalances()
+
 	if err != nil {
 		return nil, err
 	}
-	value := gjson.ParseBytes(byteArray)
-	balance := value.Get("data.balance").Num
-	freeze := value.Get("data.freezeBalance").Num
 
-	return &models.Balance{
-		Available: balance,
-		OnOrders:  freeze,
-	}, nil
+	completeBalance, ok := completeBalances[coin]
+	if !ok {
+		return nil, errors.New("cannot find complete balance")
+	}
+	return completeBalance, nil
 }
 
 type KucoinActiveOrderResponse struct {
