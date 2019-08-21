@@ -6,14 +6,14 @@ import (
 )
 
 type BoardOrder struct {
-	Type   OrderType
-	Price  float64
-	Amount float64
+	Type   OrderType `json:"-"`
+	Price  float64   `json:"price"`
+	Amount float64   `json:"amount"`
 }
 
 type Board struct {
-	Asks []BoardOrder
-	Bids []BoardOrder
+	Asks []BoardOrder `json:"asks"`
+	Bids []BoardOrder `json:"bids"`
 }
 
 func (b *Board) BestBidAmount() float64 {
