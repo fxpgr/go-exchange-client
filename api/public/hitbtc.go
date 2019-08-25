@@ -432,8 +432,8 @@ func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Boar
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range jsonBids {
 		priceStr, err := v.GetString("price")
 		if err != nil {
@@ -451,7 +451,7 @@ func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Boar
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: size,
 			Type:   models.Bid,
@@ -474,7 +474,7 @@ func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Boar
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: size,
 			Type:   models.Ask,

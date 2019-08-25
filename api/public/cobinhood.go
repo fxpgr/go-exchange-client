@@ -417,8 +417,8 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json asks")
 	}
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range jsonBids {
 		s, err := v.Array()
 		if err != nil {
@@ -441,7 +441,7 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Bid,
@@ -469,7 +469,7 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse amount")
 		}
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Ask,

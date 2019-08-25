@@ -345,8 +345,8 @@ func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, e
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range jsonBids {
 		s, err := v.Array()
 		if err != nil {
@@ -364,7 +364,7 @@ func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, e
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Bid,
@@ -387,7 +387,7 @@ func (p *PoloniexApi) Board(trading string, settlement string) (*models.Board, e
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse price")
 		}
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Ask,

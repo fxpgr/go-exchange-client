@@ -409,8 +409,8 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json asks")
 	}
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range jsonBids {
 		arr, err := v.Array()
 		if err != nil {
@@ -424,7 +424,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  pricef,
 			Amount: sizef,
 			Type:   models.Bid,
@@ -443,7 +443,7 @@ func (h *LbankApi) Board(trading string, settlement string) (board *models.Board
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse array")
 		}
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  pricef,
 			Amount: sizef,
 			Type:   models.Ask,

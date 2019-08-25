@@ -369,13 +369,13 @@ func (h *BinanceApi) fetchBoard() error {
 				break
 			}
 		}
-		bids := make([]models.BoardOrder, 0)
-		asks := make([]models.BoardOrder, 0)
+		bids := make([]models.BoardBar, 0)
+		asks := make([]models.BoardBar, 0)
 
 		bestBidPricef := v.Get("bidPrice").Float()
 		bestBidAmountf := v.Get("bidQty").Float()
 
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  bestBidPricef,
 			Amount: bestBidAmountf,
 			Type:   models.Bid,
@@ -384,7 +384,7 @@ func (h *BinanceApi) fetchBoard() error {
 		bestAskPricef := v.Get("askPrice").Float()
 		bestAskAmountf := v.Get("askQty").Float()
 
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  bestAskPricef,
 			Amount: bestAskAmountf,
 			Type:   models.Ask,

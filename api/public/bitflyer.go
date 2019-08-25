@@ -322,8 +322,8 @@ func (b *BitflyerApi) Board(trading string, settlement string) (board *models.Bo
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range jsonBids {
 		price, err := v.GetFloat64("price")
 		if err != nil {
@@ -333,7 +333,7 @@ func (b *BitflyerApi) Board(trading string, settlement string) (board *models.Bo
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: size,
 			Type:   models.Bid,
@@ -348,7 +348,7 @@ func (b *BitflyerApi) Board(trading string, settlement string) (board *models.Bo
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse size")
 		}
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: size,
 			Type:   models.Ask,

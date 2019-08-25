@@ -410,12 +410,12 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	sells := value.Get("data.asks").Array()
 	buys := value.Get("data.bids").Array()
 
-	bids := make([]models.BoardOrder, 0)
-	asks := make([]models.BoardOrder, 0)
+	bids := make([]models.BoardBar, 0)
+	asks := make([]models.BoardBar, 0)
 	for _, v := range buys {
 		price := v.Array()[1].Float()
 		amount := v.Array()[2].Float()
-		bids = append(bids, models.BoardOrder{
+		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Bid,
@@ -424,7 +424,7 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	for _, v := range sells {
 		price := v.Array()[1].Float()
 		amount := v.Array()[2].Float()
-		asks = append(asks, models.BoardOrder{
+		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: amount,
 			Type:   models.Ask,
