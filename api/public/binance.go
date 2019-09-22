@@ -2,6 +2,7 @@ package public
 
 import (
 	"io"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"io/ioutil"
 )
 
 const (
@@ -422,8 +422,8 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	asks := make([]models.BoardBar, 0)
 	bids := make([]models.BoardBar, 0)
 	for _, bidJson := range bidsJson {
-		price := bidJson.Array()[0].Num
-		amount := bidJson.Array()[0].Num
+		price := bidJson.Array()[0].Float()
+		amount := bidJson.Array()[0].Float()
 		bidBoardBar := models.BoardBar{
 			Type:   models.Bid,
 			Price:  price,
@@ -432,8 +432,8 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 		bids = append(bids, bidBoardBar)
 	}
 	for _, askJson := range asksJson {
-		price := askJson.Array()[0].Num
-		amount := askJson.Array()[0].Num
+		price := askJson.Array()[0].Float()
+		amount := askJson.Array()[0].Float()
 		askBoardBar := models.BoardBar{
 			Type:   models.Ask,
 			Price:  price,
