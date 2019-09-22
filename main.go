@@ -9,11 +9,18 @@ import (
 )
 
 func main() {
-	cli, err := public.NewClient("kucoin")
+	cli, err := public.NewClient("binance")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
+	board, err := cli.Board("ETH", "BTC")
+	if err != nil {
+		fmt.Println(err)
+		panic(err)
+	}
+	fmt.Println(len(board.Asks))
+	fmt.Println(len(board.Bids))
 	pairs, err := cli.CurrencyPairs()
 	if err != nil {
 		fmt.Println(err)

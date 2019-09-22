@@ -27,12 +27,13 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
+		boardTickerCache:  cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        cli,
 
-		m:         new(sync.Mutex),
-		rateM:     new(sync.Mutex),
-		currencyM: new(sync.Mutex),
-		boardM:    new(sync.Mutex),
+		m:            new(sync.Mutex),
+		rateM:        new(sync.Mutex),
+		currencyM:    new(sync.Mutex),
+		boardTickerM: new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil
@@ -46,16 +47,16 @@ type BinanceApi struct {
 	rateMap           map[string]map[string]float64
 	precisionMap      map[string]map[string]models.Precisions
 	boardCache        *cache.Cache
+	boardTickerCache  *cache.Cache
 	currencyPairs     []models.CurrencyPair
 
 	HttpClient *http.Client
 
-	settlements []string
-
-	m         *sync.Mutex
-	rateM     *sync.Mutex
-	currencyM *sync.Mutex
-	boardM    *sync.Mutex
+	settlements  []string
+	m            *sync.Mutex
+	rateM        *sync.Mutex
+	currencyM    *sync.Mutex
+	boardTickerM *sync.Mutex
 }
 
 func (h *BinanceApi) SetTransport(transport http.RoundTripper) error {
@@ -344,7 +345,7 @@ func (h *BinanceApi) FrozenCurrency() ([]string, error) {
 	return uniq, nil
 }
 
-func (h *BinanceApi) fetchBoard() error {
+func (h *BinanceApi) fetchBoardTicker() error {
 	url := h.publicApiUrl("/api/v3/ticker/bookTicker")
 	byteArray, err := h.getRequest(url)
 	if err != nil {
@@ -393,15 +394,12 @@ func (h *BinanceApi) fetchBoard() error {
 			Bids: bids,
 			Asks: asks,
 		}
-		h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
+		h.boardTickerCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
 	}
 	return nil
 }
 
-/*duplicated*/
 func (h *BinanceApi) Board(trading string, settlement string) (board *models.Board, err error) {
-	h.boardM.Lock()
-	defer h.boardM.Unlock()
 	c, found := h.boardCache.Get(trading + "_" + settlement)
 	if found {
 		return c.(*models.Board), nil
@@ -409,11 +407,64 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	if trading == settlement {
 		return nil, errors.Errorf("trading and settlment are same")
 	}
-	err = h.fetchBoard()
+	url := h.publicApiUrl("/api/v1/depth?limit=1000&symbol=" + trading + settlement)
+	byteArray, err := h.getRequest(url)
 	if err != nil {
 		return nil, err
 	}
-	c, found = h.boardCache.Get(trading + "_" + settlement)
+	value := gjson.Parse(byteArray)
+	if value.Get("code").String() == "-1003" {
+		return nil, errors.Errorf("ip banned %s", url)
+	}
+	bidsJson := value.Get("bids").Array()
+	asksJson := value.Get("asks").Array()
+
+	asks := make([]models.BoardBar, 0)
+	bids := make([]models.BoardBar, 0)
+	for _, bidJson := range bidsJson {
+		price := bidJson.Array()[0].Num
+		amount := bidJson.Array()[0].Num
+		bidBoardBar := models.BoardBar{
+			Type:   models.Bid,
+			Price:  price,
+			Amount: amount,
+		}
+		bids = append(bids, bidBoardBar)
+	}
+	for _, askJson := range asksJson {
+		price := askJson.Array()[0].Num
+		amount := askJson.Array()[0].Num
+		askBoardBar := models.BoardBar{
+			Type:   models.Ask,
+			Price:  price,
+			Amount: amount,
+		}
+		asks = append(asks, askBoardBar)
+	}
+	board = &models.Board{
+		Asks: asks,
+		Bids: bids,
+	}
+	h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
+	return board, nil
+}
+
+/*duplicated*/
+func (h *BinanceApi) BoardTicker(trading string, settlement string) (board *models.Board, err error) {
+	h.boardTickerM.Lock()
+	defer h.boardTickerM.Unlock()
+	c, found := h.boardTickerCache.Get(trading + "_" + settlement)
+	if found {
+		return c.(*models.Board), nil
+	}
+	if trading == settlement {
+		return nil, errors.Errorf("trading and settlment are same")
+	}
+	err = h.fetchBoardTicker()
+	if err != nil {
+		return nil, err
+	}
+	c, found = h.boardTickerCache.Get(trading + "_" + settlement)
 	if !found {
 		return nil, errors.Errorf("cache err")
 	}
