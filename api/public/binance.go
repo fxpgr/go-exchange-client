@@ -423,7 +423,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	bids := make([]models.BoardBar, 0)
 	for _, bidJson := range bidsJson {
 		price := bidJson.Array()[0].Float()
-		amount := bidJson.Array()[0].Float()
+		amount := bidJson.Array()[1].Float()
 		bidBoardBar := models.BoardBar{
 			Type:   models.Bid,
 			Price:  price,
@@ -433,7 +433,7 @@ func (h *BinanceApi) Board(trading string, settlement string) (board *models.Boa
 	}
 	for _, askJson := range asksJson {
 		price := askJson.Array()[0].Float()
-		amount := askJson.Array()[0].Float()
+		amount := askJson.Array()[1].Float()
 		askBoardBar := models.BoardBar{
 			Type:   models.Ask,
 			Price:  price,
