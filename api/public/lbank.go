@@ -25,6 +25,7 @@ func NewLbankPublicApi() (*LbankApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 
@@ -45,6 +46,7 @@ type LbankApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	currencyPairs     []models.CurrencyPair
 	boardCache        *cache.Cache
@@ -200,6 +202,11 @@ func (h *LbankApi) fetchRate() error {
 		m[settlement] = volumef
 	}
 	return nil
+}
+
+func (h *LbankApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+
+	return nil, errors.New("can not fetch orderBookTick due to Lbank API")
 }
 
 func (h *LbankApi) RateMap() (map[string]map[string]float64, error) {

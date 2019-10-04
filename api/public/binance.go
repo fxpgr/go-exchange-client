@@ -25,6 +25,7 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		boardTickerCache:  cache.New(3*time.Second, 1*time.Second),
@@ -45,6 +46,7 @@ type BinanceApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	boardCache        *cache.Cache
 	boardTickerCache  *cache.Cache
@@ -158,6 +160,7 @@ func (h *BinanceApi) fetchRate() error {
 
 	rateMap := make(map[string]map[string]float64)
 	volumeMap := make(map[string]map[string]float64)
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
 	for _, v := range value.Array() {
 		var trading, settlement string
 		symbol := v.Get("symbol").Str
@@ -171,6 +174,8 @@ func (h *BinanceApi) fetchRate() error {
 
 		lastf := v.Get("lastPrice").Float()
 		volumef := v.Get("volume").Float()
+		bestbidPrice := v.Get("bidPrice").Float()
+		bestaskPrice := v.Get("askPrice").Float()
 		h.rateM.Lock()
 		n, ok := volumeMap[trading]
 		if !ok {
@@ -184,11 +189,35 @@ func (h *BinanceApi) fetchRate() error {
 			rateMap[trading] = m
 		}
 		m[settlement] = lastf
+		l, ok := orderBookTickMap[trading]
+		if !ok {
+			l = make(map[string]models.OrderBookTick)
+			orderBookTickMap[trading] = l
+		}
+		l[settlement] = models.OrderBookTick{
+			BestAskPrice: bestaskPrice,
+			BestBidPrice: bestbidPrice,
+		}
 		h.rateM.Unlock()
 	}
 	h.rateMap = rateMap
 	h.volumeMap = volumeMap
+	h.orderBookTickMap = orderBookTickMap
 	return nil
+}
+
+func (h *BinanceApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 func (h *BinanceApi) RateMap() (map[string]map[string]float64, error) {

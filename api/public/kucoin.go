@@ -26,6 +26,7 @@ func NewKucoinPublicApi() (*KucoinApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{Timeout: time.Duration(10) * time.Second},
@@ -45,6 +46,7 @@ type KucoinApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	boardCache        *cache.Cache
 	currencyPairs     []models.CurrencyPair
@@ -169,6 +171,7 @@ func (h *KucoinApi) fetchRate() error {
 	value := gjson.ParseBytes(byteArray)
 	rateMap := make(map[string]map[string]float64)
 	volumeMap := make(map[string]map[string]float64)
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
 	for _, v := range value.Get("data.ticker").Array() {
 		currencies := strings.Split(v.Get("symbol").Str, "-")
 		if len(currencies) < 2 {
@@ -179,6 +182,8 @@ func (h *KucoinApi) fetchRate() error {
 
 		lastf := v.Get("last").Float()
 		volumef := v.Get("vol").Float()
+		bestbidPrice := v.Get("buy").Float()
+		bestaskPrice := v.Get("sell").Float()
 
 		h.rateM.Lock()
 		n, ok := volumeMap[trading]
@@ -193,10 +198,20 @@ func (h *KucoinApi) fetchRate() error {
 			rateMap[trading] = m
 		}
 		m[settlement] = lastf
+		l, ok := orderBookTickMap[trading]
+		if !ok {
+			l = make(map[string]models.OrderBookTick)
+			orderBookTickMap[trading] = l
+		}
+		l[settlement] = models.OrderBookTick{
+			BestBidPrice: bestbidPrice,
+			BestAskPrice: bestaskPrice,
+		}
 		h.rateM.Unlock()
 	}
 	h.rateMap = rateMap
 	h.volumeMap = volumeMap
+	h.orderBookTickMap = orderBookTickMap
 	return nil
 }
 
@@ -227,6 +242,20 @@ func (h *KucoinApi) Precise(trading string, settlement string) (*models.Precisio
 	} else {
 		return &precisions, nil
 	}
+}
+
+func (h *KucoinApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 func (h *KucoinApi) VolumeMap() (map[string]map[string]float64, error) {

@@ -25,6 +25,7 @@ func NewOkexPublicApi() (*OkexApi, error) {
 		RateCacheDuration:          30 * time.Second,
 		rateMap:                    nil,
 		volumeMap:                  nil,
+		orderBookTickMap:           nil,
 		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -46,6 +47,7 @@ type OkexApi struct {
 	rateLastUpdated            time.Time
 	volumeMap                  map[string]map[string]float64
 	rateMap                    map[string]map[string]float64
+	orderBookTickMap           map[string]map[string]models.OrderBookTick
 	precisionMap               map[string]map[string]models.Precisions
 	currencyPairs              []models.CurrencyPair
 	CurrencyPairsCacheDuration time.Duration
@@ -139,6 +141,7 @@ type OkexTickResponse struct {
 func (h *OkexApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
+	h.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
 	url := h.publicApiUrl("/v2/spot/markets/tickers")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
@@ -176,6 +179,22 @@ func (h *OkexApi) fetchRate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
+		buyString, err := v.GetString("buy")
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+		buyf, err := strconv.ParseFloat(buyString, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+		sellString, err := v.GetString("sell")
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+		sellf, err := strconv.ParseFloat(sellString, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
 
 		pairString, err := v.GetString("symbol")
 		if err != nil {
@@ -199,10 +218,32 @@ func (h *OkexApi) fetchRate() error {
 			h.volumeMap[trading] = m
 		}
 		m[settlement] = volumef
+		n, ok := h.orderBookTickMap[trading]
+		if !ok {
+			n = make(map[string]models.OrderBookTick)
+			h.orderBookTickMap[trading] = n
+		}
+		n[settlement] = models.OrderBookTick{
+			BestAskPrice: sellf,
+			BestBidPrice: buyf,
+		}
 	}
 	return nil
 }
 
+func (h *OkexApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
+}
 func (h *OkexApi) RateMap() (map[string]map[string]float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()

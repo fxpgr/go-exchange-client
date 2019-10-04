@@ -29,6 +29,7 @@ func NewCobinhoodPublicApi() (*CobinhoodApi, error) {
 		RateCacheDuration:          30 * time.Second,
 		rateMap:                    nil,
 		volumeMap:                  nil,
+		orderBookTickMap:           nil,
 		rateLastUpdated:            time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		CurrencyPairsCacheDuration: 7 * 24 * time.Hour,
 		currencyPairsLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -45,6 +46,7 @@ type CobinhoodApi struct {
 	RateCacheDuration          time.Duration
 	volumeMap                  map[string]map[string]float64
 	rateMap                    map[string]map[string]float64
+	orderBookTickMap           map[string]map[string]models.OrderBookTick
 	precisionMap               map[string]map[string]models.Precisions
 	rateLastUpdated            time.Time
 	currencyPairs              []models.CurrencyPair
@@ -131,6 +133,7 @@ func (h *CobinhoodApi) fetchPrecision() error {
 func (h *CobinhoodApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
+	h.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
 	url := h.publicApiUrl("/v1/market/tickers")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
@@ -173,6 +176,23 @@ func (h *CobinhoodApi) fetchRate() error {
 			return errors.Wrapf(err, "failed to parse quote")
 		}
 
+		askString, err := v.GetString("lowest_ask")
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+		askf, err := strconv.ParseFloat(askString, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+
+		bidString, err := v.GetString("highest_bid")
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
+		bidf, err := strconv.ParseFloat(bidString, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quote")
+		}
 		pairString, err := v.GetString("trading_pair_id")
 		if err != nil {
 			return errors.Wrapf(err, "failed to parse quote")
@@ -195,8 +215,31 @@ func (h *CobinhoodApi) fetchRate() error {
 			h.volumeMap[trading] = m
 		}
 		m[settlement] = volumef
+		n, ok := h.orderBookTickMap[trading]
+		if !ok {
+			n = make(map[string]models.OrderBookTick)
+			h.orderBookTickMap[trading] = n
+		}
+		n[settlement] = models.OrderBookTick{
+			BestAskPrice: askf,
+			BestBidPrice: bidf,
+		}
 	}
 	return nil
+}
+
+func (h *CobinhoodApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 func (h *CobinhoodApi) RateMap() (map[string]map[string]float64, error) {

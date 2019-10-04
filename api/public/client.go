@@ -20,6 +20,7 @@ type PublicClient interface {
 	Rate(trading string, settlement string) (float64, error)
 	RateMap() (map[string]map[string]float64, error)
 	VolumeMap() (map[string]map[string]float64, error)
+	OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error)
 	FrozenCurrency() ([]string, error)
 	Board(trading string, settlement string) (*models.Board, error)
 	Precise(trading string, settlement string) (*models.Precisions, error)

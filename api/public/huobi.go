@@ -27,6 +27,7 @@ func NewHuobiPublicApi() (*HuobiApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{Timeout: time.Duration(10) * time.Second},
@@ -46,6 +47,7 @@ type HuobiApi struct {
 	rateLastUpdated   time.Time
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	currencyPairs     []models.CurrencyPair
 	boardCache        *cache.Cache
@@ -166,6 +168,7 @@ func (h *HuobiApi) fetchPrecision() error {
 func (h *HuobiApi) fetchRate() error {
 	rateMap := make(map[string]map[string]float64)
 	volumeMap := make(map[string]map[string]float64)
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
 
 	currencyPairs, err := h.CurrencyPairs()
 	if err != nil {
@@ -231,11 +234,43 @@ func (h *HuobiApi) fetchRate() error {
 			rateMap[r.Trading] = m
 		}
 		m[r.Settlement] = close
+		ask, err := tick.GetFloat64Array("ask")
+		if err != nil || len(ask) == 0 {
+			continue
+		}
+		bid, err := tick.GetFloat64Array("bid")
+		if err != nil || len(bid) == 0 {
+			continue
+		}
+		l, ok := orderBookTickMap[r.Trading]
+		if !ok {
+			l = make(map[string]models.OrderBookTick)
+			orderBookTickMap[r.Trading] = l
+		}
+		l[r.Settlement] = models.OrderBookTick{
+			BestAskPrice: ask[0],
+			BestBidPrice: bid[0],
+		}
 		h.rateM.Unlock()
 	}
 	h.rateMap = rateMap
 	h.volumeMap = volumeMap
+	h.orderBookTickMap = orderBookTickMap
 	return nil
+}
+
+func (h *HuobiApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 func (h *HuobiApi) RateMap() (map[string]map[string]float64, error) {

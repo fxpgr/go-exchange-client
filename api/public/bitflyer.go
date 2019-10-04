@@ -26,6 +26,7 @@ func NewBitflyerPublicApi() (*BitflyerApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		HttpClient:        http.Client{},
 
@@ -40,11 +41,12 @@ type BitflyerApi struct {
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
 
-	volumeMap       map[string]map[string]float64
-	rateMap         map[string]map[string]float64
-	precisionMap    map[string]map[string]models.Precisions
-	rateLastUpdated time.Time
-	settlements     []string
+	volumeMap        map[string]map[string]float64
+	rateMap          map[string]map[string]float64
+	orderBookTickMap map[string]map[string]models.OrderBookTick
+	precisionMap     map[string]map[string]models.Precisions
+	rateLastUpdated  time.Time
+	settlements      []string
 
 	m *sync.Mutex
 }
@@ -68,6 +70,7 @@ func (b *BitflyerApi) fetchSettlements() error {
 func (b *BitflyerApi) fetchRate() error {
 	b.rateMap = make(map[string]map[string]float64)
 	b.volumeMap = make(map[string]map[string]float64)
+	b.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
 	url := b.publicApiUrl("ticker")
 	resp, err := b.HttpClient.Get(url)
 	if err != nil {
@@ -116,7 +119,6 @@ func (b *BitflyerApi) fetchRate() error {
 	if !ok {
 		return errors.New("volume is not parsed")
 	}
-
 	m, ok = b.volumeMap[trading]
 	if !ok {
 		m = make(map[string]float64)
@@ -124,6 +126,24 @@ func (b *BitflyerApi) fetchRate() error {
 	}
 	m[settlement] = volume
 
+	// update orderBooTick
+	ask, ok := json.Path("best_ask").Data().(float64)
+	if !ok {
+		return errors.New("volume is not parsed")
+	}
+	bid, ok := json.Path("best_bid").Data().(float64)
+	if !ok {
+		return errors.New("volume is not parsed")
+	}
+	n, ok := b.orderBookTickMap[trading]
+	if !ok {
+		n = make(map[string]models.OrderBookTick)
+		b.orderBookTickMap[trading] = n
+	}
+	n[settlement] = models.OrderBookTick{
+		BestAskPrice: ask,
+		BestBidPrice: bid,
+	}
 	return nil
 }
 
@@ -263,6 +283,20 @@ func (b *BitflyerApi) RateMap() (map[string]map[string]float64, error) {
 		b.rateLastUpdated = now
 	}
 	return b.rateMap, nil
+}
+
+func (b *BitflyerApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	b.m.Lock()
+	defer b.m.Unlock()
+	now := time.Now()
+	if now.Sub(b.rateLastUpdated) >= b.RateCacheDuration {
+		err := b.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		b.rateLastUpdated = now
+	}
+	return b.orderBookTickMap, nil
 }
 
 func (b *BitflyerApi) VolumeMap() (map[string]map[string]float64, error) {

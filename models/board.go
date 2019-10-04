@@ -5,6 +5,11 @@ import (
 	"sort"
 )
 
+type OrderBookTick struct {
+	BestAskPrice float64
+	BestBidPrice float64
+}
+
 type BoardBar struct {
 	Type   OrderType `json:"-"`
 	Price  float64   `json:"price"`

@@ -27,6 +27,7 @@ func NewPoloniexPublicApi() (*PoloniexApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		HttpClient:        http.Client{},
 
@@ -50,6 +51,7 @@ type PoloniexApi struct {
 	RateCacheDuration time.Duration
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated   time.Time
 	HttpClient        http.Client
@@ -107,6 +109,7 @@ func (p *PoloniexApi) fetchPrecision() error {
 func (p *PoloniexApi) fetchRate() error {
 	p.rateMap = make(map[string]map[string]float64)
 	p.volumeMap = make(map[string]map[string]float64)
+	p.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
 	url := p.publicApiUrl("returnTicker")
 
 	resp, err := p.HttpClient.Get(url)
@@ -137,7 +140,6 @@ func (p *PoloniexApi) fetchRate() error {
 		if err != nil {
 			return err
 		}
-
 		lastf, err := strconv.ParseFloat(last, 64)
 		if err != nil {
 			return err
@@ -167,6 +169,34 @@ func (p *PoloniexApi) fetchRate() error {
 			p.volumeMap[trading] = m
 		}
 		m[settlement] = volumef
+
+		// update orderBookTick
+		ask, err := obj.GetString("lowestAsk")
+		if err != nil {
+			return err
+		}
+		askf, err := strconv.ParseFloat(ask, 64)
+		if err != nil {
+			return err
+		}
+		bid, err := obj.GetString("highestBid")
+		if err != nil {
+			return err
+		}
+		bidf, err := strconv.ParseFloat(bid, 64)
+		if err != nil {
+			return err
+		}
+
+		n, ok := p.orderBookTickMap[trading]
+		if !ok {
+			n = make(map[string]models.OrderBookTick)
+			p.orderBookTickMap[trading] = n
+		}
+		n[settlement] = models.OrderBookTick{
+			BestAskPrice: askf,
+			BestBidPrice: bidf,
+		}
 	}
 	return nil
 }
@@ -224,7 +254,6 @@ func (p *PoloniexApi) Precise(trading string, settlement string) (*models.Precis
 	if trading == settlement {
 		return &models.Precisions{}, nil
 	}
-
 	p.fetchPrecision()
 	if m, ok := p.precisionMap[trading]; !ok {
 		return &models.Precisions{}, errors.Errorf("%s/%s", trading, settlement)
@@ -233,6 +262,20 @@ func (p *PoloniexApi) Precise(trading string, settlement string) (*models.Precis
 	} else {
 		return &precisions, nil
 	}
+}
+
+func (p *PoloniexApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	p.m.Lock()
+	defer p.m.Unlock()
+	now := time.Now()
+	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
+		err := p.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		p.rateLastUpdated = now
+	}
+	return p.orderBookTickMap, nil
 }
 
 func (p *PoloniexApi) RateMap() (map[string]map[string]float64, error) {

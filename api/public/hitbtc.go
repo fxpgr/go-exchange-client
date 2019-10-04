@@ -29,6 +29,7 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
+		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{},
@@ -44,6 +45,7 @@ type HitbtcApi struct {
 	RateCacheDuration time.Duration
 	volumeMap         map[string]map[string]float64
 	rateMap           map[string]map[string]float64
+	orderBookTickMap  map[string]map[string]models.OrderBookTick
 	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated   time.Time
 	boardCache        *cache.Cache
@@ -173,6 +175,7 @@ func (h *HitbtcApi) fetchPrecision() error {
 func (h *HitbtcApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
+	h.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
 	url := h.publicApiUrl("ticker")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
@@ -246,9 +249,51 @@ func (h *HitbtcApi) fetchRate() error {
 			h.volumeMap[trading] = m
 		}
 		m[settlement] = volumef
+
+		// update orderBookTick
+		askPrice, ok := v.Path("ask").Data().(string)
+		if !ok {
+			continue
+		}
+		askPricef, err := strconv.ParseFloat(askPrice, 64)
+		if err != nil {
+			return err
+		}
+		bidPrice, ok := v.Path("bid").Data().(string)
+		if !ok {
+			continue
+		}
+		bidPricef, err := strconv.ParseFloat(bidPrice, 64)
+		if err != nil {
+			return err
+		}
+
+		n, ok := h.orderBookTickMap[trading]
+		if !ok {
+			n = make(map[string]models.OrderBookTick)
+			h.orderBookTickMap[trading] = n
+		}
+		n[settlement] = models.OrderBookTick{
+			BestAskPrice: askPricef,
+			BestBidPrice: bidPricef,
+		}
 	}
 
 	return nil
+}
+
+func (h *HitbtcApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchRate()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 func (h *HitbtcApi) RateMap() (map[string]map[string]float64, error) {

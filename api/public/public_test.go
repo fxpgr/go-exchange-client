@@ -588,7 +588,7 @@ func TestKucoinBoard(t *testing.T) {
 }
 
 func TestKucoinRate(t *testing.T) {
-	jsonTicker := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535768321674,"data":[{"coinType":"ETH","trading":true,"symbol":"ETH-BTC","lastDealPrice":0.04033865,"buy":0.04033865,"sell":0.04042767,"change":0.00015153,"coinTypePair":"BTC","sort":100,"feeRate":0.001,"volValue":157.34520663,"plus":true,"high":0.04047376,"datetime":1535768316000,"vol":3913.7508371,"low":0.03980003,"changeRate":0.0038},{"coinType":"BTC","trading":true,"symbol":"BTC-USDT","lastDealPrice":7046.111208,"buy":7046.111208,"sell":7052.0,"change":25.35312,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":1588268.48119897,"plus":true,"high":7082.795592,"datetime":1535768316000,"vol":227.88867684,"low":6890.910667,"changeRate":0.0036},{"coinType":"ETH","trading":true,"symbol":"ETH-USDT","lastDealPrice":284.515501,"buy":284.515501,"sell":284.739999,"change":2.805674,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":587362.92606791,"plus":true,"high":285.187344,"datetime":1535768316000,"vol":2093.9763169,"low":276.911658,"changeRate":0.01}]}`
+	jsonTicker := `{"data":{"time":1550653727731,"ticker":[{"symbol":"ETH-BTC","symbolName":"ETH-BTC","buy":"0.00001191","sell":"0.00001206","changeRate":"0.057","changePrice":"0.00000065","high":"0.0000123","low":"0.00001109","vol":"45161.5073","volValue":"2127.28693026","last":"0.04033865"}]}}`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonTicker, status: http.StatusOK}
 	client := newTestKucoinPublicClient(fakeRoundTripper)
 	rate, err := client.Rate("ETH", "BTC")
@@ -596,20 +596,20 @@ func TestKucoinRate(t *testing.T) {
 		t.Error(err)
 	}
 	if rate != 0.04033865 {
-		t.Errorf("LbankPublicApi: Expected %v. Got %v", 0.04033865, rate)
+		t.Errorf("KucoinPublicApi: Expected %v. Got %v", 0.04033865, rate)
 	}
 }
 
 func TestKucoinVolume(t *testing.T) {
-	jsonTicker := `{"success":true,"code":"OK","msg":"Operation succeeded.","timestamp":1535768321674,"data":[{"coinType":"ETH","trading":true,"symbol":"ETH-BTC","lastDealPrice":0.04033865,"buy":0.04033865,"sell":0.04042767,"change":0.00015153,"coinTypePair":"BTC","sort":100,"feeRate":0.001,"volValue":157.34520663,"plus":true,"high":0.04047376,"datetime":1535768316000,"vol":3913.7508371,"low":0.03980003,"changeRate":0.0038},{"coinType":"BTC","trading":true,"symbol":"BTC-USDT","lastDealPrice":7046.111208,"buy":7046.111208,"sell":7052.0,"change":25.35312,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":1588268.48119897,"plus":true,"high":7082.795592,"datetime":1535768316000,"vol":227.88867684,"low":6890.910667,"changeRate":0.0036},{"coinType":"ETH","trading":true,"symbol":"ETH-USDT","lastDealPrice":284.515501,"buy":284.515501,"sell":284.739999,"change":2.805674,"coinTypePair":"USDT","sort":100,"feeRate":0.001,"volValue":587362.92606791,"plus":true,"high":285.187344,"datetime":1535768316000,"vol":2093.9763169,"low":276.911658,"changeRate":0.01}]}`
+	jsonTicker := `{"data":{"time":1550653727731,"ticker":[{"symbol":"ETH-BTC","symbolName":"ETH-BTC","buy":"0.00001191","sell":"0.00001206","changeRate":"0.057","changePrice":"0.00000065","high":"0.0000123","low":"0.00001109","vol":"45161.5073","volValue":"2127.28693026","last":"0.04033865"}]}}`
 	fakeRoundTripper := &FakeRoundTripper{message: jsonTicker, status: http.StatusOK}
 	client := newTestKucoinPublicClient(fakeRoundTripper)
 	vol, err := client.Volume("ETH", "BTC")
 	if err != nil {
 		t.Error(err)
 	}
-	if vol != 3913.7508371 {
-		t.Errorf("LbankPublicApi: Expected %v. Got %v", 3913.7508371, vol)
+	if vol != 45161.5073 {
+		t.Errorf("KucoinPublicApi: Expected %v. Got %v", 45161.5073, vol)
 	}
 }
 
