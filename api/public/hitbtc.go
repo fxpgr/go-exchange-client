@@ -1,8 +1,10 @@
 package public
 
 import (
+	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,8 +14,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"io/ioutil"
-	"strings"
 )
 
 const (
@@ -192,7 +192,6 @@ func (h *HitbtcApi) fetchRate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
-
 	rateMap, err := json.Children()
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
@@ -207,7 +206,7 @@ func (h *HitbtcApi) fetchRate() error {
 		var trading string
 		for _, s := range h.settlements {
 			index := strings.LastIndex(pair, s)
-			if index != 0 && index == len(pair)-len(s) {
+			if index != -1 && index == len(pair)-len(s) {
 				settlement = s
 				trading = pair[0:index]
 			}
