@@ -24,7 +24,7 @@ const (
 func NewHuobiPublicApi() (*HuobiApi, error) {
 	api := &HuobiApi{
 		BaseURL:           HUOBI_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
+		RateCacheDuration: 3 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
 		orderBookTickMap:  nil,

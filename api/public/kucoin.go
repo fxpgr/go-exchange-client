@@ -23,7 +23,7 @@ const (
 func NewKucoinPublicApi() (*KucoinApi, error) {
 	api := &KucoinApi{
 		BaseURL:           KUCOIN_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
+		RateCacheDuration: 3 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
 		orderBookTickMap:  nil,

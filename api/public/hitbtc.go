@@ -26,7 +26,7 @@ type HitbtcApiConfig struct {
 func NewHitbtcPublicApi() (*HitbtcApi, error) {
 	api := &HitbtcApi{
 		BaseURL:           HITBTC_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
+		RateCacheDuration: 3 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
 		orderBookTickMap:  nil,

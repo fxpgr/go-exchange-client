@@ -26,7 +26,7 @@ type CobinhoodApiConfig struct {
 func NewCobinhoodPublicApi() (*CobinhoodApi, error) {
 	api := &CobinhoodApi{
 		BaseURL:                    COBINHOOD_BASE_URL,
-		RateCacheDuration:          30 * time.Second,
+		RateCacheDuration:          3 * time.Second,
 		rateMap:                    nil,
 		volumeMap:                  nil,
 		orderBookTickMap:           nil,

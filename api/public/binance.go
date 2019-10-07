@@ -22,7 +22,7 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 	cli.Timeout = 20 * time.Second
 	api := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
-		RateCacheDuration: 30 * time.Second,
+		RateCacheDuration: 3 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
 		orderBookTickMap:  nil,
