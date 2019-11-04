@@ -133,12 +133,25 @@ func (h *KucoinApi) fetchPrecision() error {
 	}
 	value = gjson.ParseBytes(byteArray)
 	for _, v := range value.Get("data.ticker").Array() {
+
 		currencies := strings.Split(v.Get("symbol").Str, "-")
 		if len(currencies) < 2 {
 			continue
 		}
 		trading := currencies[0]
 		settlement := currencies[1]
+		buyPrecision := Precision(v.Get("buy").Str)
+		sellPrecision := Precision(v.Get("sell").Str)
+		highPrecision := Precision(v.Get("high").Str)
+		lowPrecision := Precision(v.Get("low").Str)
+		volPrecision := Precision(v.Get("vol").Str)
+		precisionArray := []int{buyPrecision, sellPrecision,highPrecision,lowPrecision}
+		maxPrecision := 0
+		for _,v := range precisionArray {
+			if v>maxPrecision {
+				maxPrecision = v
+			}
+		}
 
 		m, ok := h.precisionMap[trading]
 		if !ok {
@@ -146,8 +159,8 @@ func (h *KucoinApi) fetchPrecision() error {
 			h.precisionMap[trading] = m
 		}
 		m[settlement] = models.Precisions{
-			PricePrecision:  coinPrecision[settlement],
-			AmountPrecision: coinPrecision[trading],
+			PricePrecision:  maxPrecision,
+			AmountPrecision: volPrecision,
 		}
 	}
 	return errors.Wrapf(err, "failed to fetch %s", url)

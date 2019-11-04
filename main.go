@@ -12,7 +12,7 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	board, err := cli.Precise("ONE", "BTC")
+	board, err := cli.Precise("OCN", "BTC")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
