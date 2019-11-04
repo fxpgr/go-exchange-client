@@ -7,12 +7,12 @@ import (
 )
 
 func main() {
-	cli, err := public.NewClient("hitbtc")
+	cli, err := public.NewClient("kucoin")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	board, err := cli.Precise("XRP", "BTC")
+	board, err := cli.Precise("ONE", "BTC")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)

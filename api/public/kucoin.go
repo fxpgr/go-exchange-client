@@ -420,7 +420,7 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToUpper(trading)+"-"+strings.ToUpper(settlement))
-	url := h.publicApiUrl("/api/v1/market/orderbook/level3?") + args.Encode()
+	url := h.publicApiUrl("/api/v1/market/orderbook/level2?") + args.Encode()
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
@@ -442,8 +442,8 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	bids := make([]models.BoardBar, 0)
 	asks := make([]models.BoardBar, 0)
 	for _, v := range buys {
-		price := v.Array()[1].Float()
-		amount := v.Array()[2].Float()
+		price := v.Array()[0].Float()
+		amount := v.Array()[1].Float()
 		bids = append(bids, models.BoardBar{
 			Price:  price,
 			Amount: amount,
@@ -451,8 +451,8 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 		})
 	}
 	for _, v := range sells {
-		price := v.Array()[1].Float()
-		amount := v.Array()[2].Float()
+		price := v.Array()[0].Float()
+		amount := v.Array()[1].Float()
 		asks = append(asks, models.BoardBar{
 			Price:  price,
 			Amount: amount,
