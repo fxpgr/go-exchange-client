@@ -30,6 +30,7 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 		rateMap:           nil,
 		volumeMap:         nil,
 		orderBookTickMap:  nil,
+		precisionMap:      nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{},
@@ -141,7 +142,7 @@ func (h *HitbtcApi) fetchPrecision() error {
 		var trading string
 		for _, s := range h.settlements {
 			index := strings.LastIndex(pair, s)
-			if index != 0 && index == len(pair)-len(s) {
+			if index > 0 && index == len(pair)-len(s) {
 				settlement = s
 				trading = pair[0:index]
 			}

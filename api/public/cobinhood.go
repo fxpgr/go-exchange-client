@@ -397,13 +397,14 @@ func (h *CobinhoodApi) FrozenCurrency() ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
+	fmt.Println(json.String())
 	result, err := json.GetObject("result")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json result key ngo")
 	}
 	currencies, err := result.GetObjectArray("currencies")
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+		return nil, errors.Wrapf(err, "failed to parse json currencies key")
 	}
 	for _, v := range currencies {
 		isFrozen, err := v.GetBoolean("funding_frozen")
@@ -444,6 +445,7 @@ func (h *CobinhoodApi) Board(trading string, settlement string) (board *models.B
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
+	fmt.Println(json.String())
 	result, err := json.GetObject("result")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json result")

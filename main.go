@@ -12,17 +12,10 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	board, err := cli.Board("ETH", "BTC")
+	board, err := cli.Precise("XRP", "BTC")
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Println(board.Asks[0].Amount)
-	fmt.Println(len(board.Bids))
-	rate,err:=cli.Rate("ETH", "BTC")
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	fmt.Println(rate)
+	fmt.Println(board)
 }
