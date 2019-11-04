@@ -420,7 +420,7 @@ func (h *KucoinApi) Board(trading string, settlement string) (board *models.Boar
 	}
 	args := url2.Values{}
 	args.Add("symbol", strings.ToUpper(trading)+"-"+strings.ToUpper(settlement))
-	url := h.publicApiUrl("/api/v1/market/orderbook/level2?") + args.Encode()
+	url := h.publicApiUrl("/api/v2/market/orderbook/level2?") + args.Encode()
 	req, err := requestGetAsChrome(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
