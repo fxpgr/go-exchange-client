@@ -24,7 +24,7 @@ const (
 	BINANCE_BASE_URL = "https://api.binance.com"
 )
 
-func NewBinanceApi(apikey string, apisecret string) (*BinanceApi, error) {
+func NewBinanceApi(apikey func() (string, error), apisecret func() (string, error)) (*BinanceApi, error) {
 	hitbtcPublic, err := public.NewBinancePublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -49,8 +49,8 @@ func NewBinanceApi(apikey string, apisecret string) (*BinanceApi, error) {
 	return &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -63,8 +63,8 @@ func NewBinanceApi(apikey string, apisecret string) (*BinanceApi, error) {
 }
 
 type BinanceApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -154,11 +154,19 @@ func (h *BinanceApi) privateApi(method string, path string, params *url.Values) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secKey, err := h.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
 	req.Header.Set("Accept", "application/json")
 
-	req.Header.Set("X-MBX-APIKEY", h.ApiKey)
-	mac := hmac.New(sha256.New, []byte(h.SecretKey))
+	req.Header.Set("X-MBX-APIKEY", apiKey)
+	mac := hmac.New(sha256.New, []byte(secKey))
 	_, err = mac.Write([]byte(params.Encode()))
 	if err != nil {
 		return nil, err

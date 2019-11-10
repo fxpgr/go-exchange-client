@@ -36,21 +36,25 @@ func (rt *FakeRoundTripper) Reset() {
 }
 
 func TestNewClient(t *testing.T) {
-	_, err := NewClient(TEST, "bitflyer", "APIKEY", "SECRETKEY")
+	apiFunc := func() (string, error) { return "APIKEY", nil }
+	secFunc := func() (string, error) { return "SECKEY", nil }
+	_, err := NewClient(TEST, "bitflyer", apiFunc, secFunc)
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient(TEST, "poloniex", "APIKEY", "SECRETKEY")
+	_, err = NewClient(TEST, "poloniex", apiFunc, secFunc)
 	if err != nil {
 		panic(err)
 	}
-	_, err = NewClient(TEST, "hitbtc", "APIKEY", "SECRETKEY")
+	_, err = NewClient(TEST, "hitbtc", apiFunc, secFunc)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClient {
+	apiFunc := func() (string, error) { return "APIKEY", nil }
+	secFunc := func() (string, error) { return "SECKEY", nil }
 	endpoint := "http://localhost:4243"
 	switch strings.ToLower(exchangeName) {
 	case "bitflyer":
@@ -59,6 +63,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		m := make(map[string]map[string]float64)
 		m["BTC"] = n
 		return &BitflyerApi{
+			ApikeyFunc:        apiFunc,
+			ApiSecretFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -73,6 +79,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		m := make(map[string]map[string]float64)
 		m["ETH"] = n
 		return &PoloniexApi{
+			ApiKeyFunc:        apiFunc,
+			SecretKeyFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -83,6 +91,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		}
 	case "hitbtc":
 		return &HitbtcApi{
+			ApiKeyFunc:        apiFunc,
+			SecretKeyFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -94,6 +104,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		}
 	case "lbank":
 		return &LbankApi{
+			ApiKeyFunc:        apiFunc,
+			SecretKeyFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -105,6 +117,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		}
 	case "kucoin":
 		return &KucoinApi{
+			ApiKeyFunc:        apiFunc,
+			SecretKeyFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -116,6 +130,8 @@ func newTestPrivateClient(exchangeName string, rt http.RoundTripper) PrivateClie
 		}
 	case "binance":
 		return &BinanceApi{
+			ApiKeyFunc:        apiFunc,
+			SecretKeyFunc:     secFunc,
 			BaseURL:           endpoint,
 			RateCacheDuration: 30 * time.Second,
 			HttpClient:        http.Client{Transport: rt},
@@ -523,6 +539,8 @@ func TestKucoinOrder(t *testing.T) {
     "orderOid": "596186ad07015679730ffa02"
   }
 }`
+	apiFunc := func() (string, error) { return "APIKEY", nil }
+	secFunc := func() (string, error) { return "SECKEY", nil }
 	endpoint := "http://localhost:4243"
 	rt := &FakeRoundTripper{message: jsonPrecision, status: http.StatusOK}
 	precisionMap := make(map[string]map[string]models.Precisions)
@@ -530,6 +548,8 @@ func TestKucoinOrder(t *testing.T) {
 	settlementMap["BTC"] = models.Precisions{AmountPrecision: 4, PricePrecision: 8}
 	precisionMap["ETH"] = settlementMap
 	client := &KucoinApi{
+		ApiKeyFunc:        apiFunc,
+		SecretKeyFunc:     secFunc,
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        http.Client{Transport: rt},
@@ -572,6 +592,8 @@ func TestBinanceOrder(t *testing.T) {
   "clientOrderId": "6gCrw2kRUAF9CvJDGP16IP",
   "origClientOrderId": "6gCrw2kRUAF9CvJDGP16IP"
 }`
+	apiFunc := func() (string, error) { return "APIKEY", nil }
+	secFunc := func() (string, error) { return "SECKEY", nil }
 	endpoint := "http://localhost:4243"
 	rt := &FakeRoundTripper{message: jsonPrecision, status: http.StatusOK}
 	precisionMap := make(map[string]map[string]models.Precisions)
@@ -579,6 +601,8 @@ func TestBinanceOrder(t *testing.T) {
 	settlementMap["BTC"] = models.Precisions{AmountPrecision: 4, PricePrecision: 8}
 	precisionMap["ETH"] = settlementMap
 	client := &BinanceApi{
+		ApiKeyFunc:        apiFunc,
+		SecretKeyFunc:     secFunc,
 		BaseURL:           endpoint,
 		RateCacheDuration: 30 * time.Second,
 		HttpClient:        http.Client{Transport: rt},

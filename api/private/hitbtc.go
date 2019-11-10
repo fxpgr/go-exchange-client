@@ -22,7 +22,7 @@ const (
 	HITBTC_BASE_URL = "https://api.hitbtc.com"
 )
 
-func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
+func NewHitbtcApi(apikey func() (string, error), apisecret func() (string, error)) (*HitbtcApi, error) {
 	hitbtcPublic, err := public.NewHitbtcPublicApi()
 	if err != nil {
 		return nil, err
@@ -47,8 +47,8 @@ func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
 	return &HitbtcApi{
 		BaseURL:           HITBTC_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -59,8 +59,8 @@ func NewHitbtcApi(apikey string, apisecret string) (*HitbtcApi, error) {
 }
 
 type HitbtcApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -91,7 +91,15 @@ func (h *HitbtcApi) privateApi(method string, path string, args map[string]strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
-	req.SetBasicAuth(h.ApiKey, h.SecretKey)
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secKey, err := h.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	req.SetBasicAuth(apiKey, secKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := h.HttpClient.Do(req)

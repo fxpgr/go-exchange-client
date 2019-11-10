@@ -32,7 +32,7 @@ type PrivateClient interface {
 	Address(c string) (string, error)
 }
 
-func NewClient(mode ClientMode, exchangeName string, apikey string, seckey string) (PrivateClient, error) {
+func NewClient(mode ClientMode, exchangeName string, apikey func() (string, error), seckey func() (string, error)) (PrivateClient, error) {
 	if mode == TEST {
 		m := new(MockPrivateClient)
 		retCompleteBalance := make(map[string]*models.Balance)

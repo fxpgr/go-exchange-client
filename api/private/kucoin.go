@@ -24,7 +24,7 @@ const (
 	KUCOIN_BASE_URL = "https://api.kucoin.com"
 )
 
-func NewKucoinApi(apikey string, apisecret string) (*KucoinApi, error) {
+func NewKucoinApi(apikey func() (string, error), apisecret func() (string, error)) (*KucoinApi, error) {
 	hitbtcPublic, err := public.NewKucoinPublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -49,8 +49,8 @@ func NewKucoinApi(apikey string, apisecret string) (*KucoinApi, error) {
 	return &KucoinApi{
 		BaseURL:           KUCOIN_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -62,8 +62,8 @@ func NewKucoinApi(apikey string, apisecret string) (*KucoinApi, error) {
 }
 
 type KucoinApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -172,6 +172,15 @@ func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisio
 	}
 }
 func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
+
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secretKey, err := h.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
 	urlStr := h.BaseURL + path
 	if strings.ToUpper(method) == "GET" {
 		urlStr = urlStr + "?" + params.Encode()
@@ -189,8 +198,8 @@ func (h *KucoinApi) privateApi(method string, path string, params *url.Values) (
 
 	strForSign := fmt.Sprintf("%s/%v/%s", path, nonce, params.Encode())
 	signatureStr := base64.StdEncoding.EncodeToString([]byte(strForSign))
-	signature := computeHmac256(signatureStr, h.SecretKey)
-	req.Header.Set("KC-API-KEY", h.ApiKey)
+	signature := computeHmac256(signatureStr, secretKey)
+	req.Header.Set("KC-API-KEY", apiKey)
 	req.Header.Set("KC-API-NONCE", fmt.Sprintf("%v", nonce))
 	req.Header.Set(
 		"KC-API-SIGNATURE", signature,

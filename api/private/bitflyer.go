@@ -27,8 +27,8 @@ type BitflyerApiConfig struct {
 }
 
 type BitflyerApi struct {
-	Apikey            string
-	ApiSecret         string
+	ApikeyFunc        func() (string, error)
+	ApiSecretFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -41,10 +41,10 @@ type BitflyerApi struct {
 	m *sync.Mutex
 }
 
-func NewBitflyerPrivateApi(apikey string, apisecret string) (*BitflyerApi, error) {
+func NewBitflyerPrivateApi(apikey func() (string, error), apisecret func() (string, error)) (*BitflyerApi, error) {
 	api := &BitflyerApi{
-		Apikey:            apikey,
-		ApiSecret:         apisecret,
+		ApikeyFunc:        apikey,
+		ApiSecretFunc:     apisecret,
 		BaseURL:           BITFLYER_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
 		rateMap:           nil,
@@ -81,8 +81,16 @@ func (b *BitflyerApi) privateApi(method string, path string, args map[string]str
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
+	apiKey, err := b.ApikeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	_, err = b.ApiSecretFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
 
-	mac := hmac.New(sha256.New, []byte(b.ApiSecret))
+	mac := hmac.New(sha256.New, []byte(apiKey))
 	_, err = mac.Write([]byte(text))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encrypt request")
@@ -91,7 +99,7 @@ func (b *BitflyerApi) privateApi(method string, path string, args map[string]str
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("ACCESS-TIMESTAMP", nonce)
-	req.Header.Add("ACCESS-KEY", b.Apikey)
+	req.Header.Add("ACCESS-KEY", apiKey)
 	req.Header.Add("ACCESS-SIGN", hex.EncodeToString(sign))
 
 	resp, err := b.HttpClient.Do(req)

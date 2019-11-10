@@ -25,12 +25,12 @@ const (
 	POLONIEX_BASE_URL = "https://poloniex.com"
 )
 
-func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
+func NewPoloniexApi(apikey func() (string, error), apisecret func() (string, error)) (*PoloniexApi, error) {
 	return &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
 		RateCacheDuration: 7 * 24 * time.Hour,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		rateMap:           nil,
 		volumeMap:         nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -40,8 +40,8 @@ func NewPoloniexApi(apikey string, apisecret string) (*PoloniexApi, error) {
 }
 
 type PoloniexApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -72,6 +72,14 @@ func (p *PoloniexApi) privateApiUrl() string {
 }
 
 func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte, error) {
+	apiKey, err := p.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", command)
+	}
+	secretKey, err := p.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", command)
+	}
 	val := url.Values{}
 	val.Add("command", command)
 	val.Add("nonce", strconv.FormatInt(time.Now().UnixNano(), 10))
@@ -87,7 +95,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 		return nil, errors.Wrapf(err, "failed to create request command %s", command)
 	}
 
-	mac := hmac.New(sha512.New, []byte(p.SecretKey))
+	mac := hmac.New(sha512.New, []byte(secretKey))
 	_, err = mac.Write([]byte(val.Encode()))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encrypt request")
@@ -95,7 +103,7 @@ func (p *PoloniexApi) privateApi(command string, args map[string]string) ([]byte
 	sign := mac.Sum(nil)
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Key", p.ApiKey)
+	req.Header.Add("Key", apiKey)
 	req.Header.Add("Sign", hex.EncodeToString(sign))
 
 	res, err := p.HttpClient.Do(req)

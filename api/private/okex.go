@@ -20,7 +20,7 @@ const (
 	OKEX_BASE_URL = "https://www.okex.com"
 )
 
-func NewOkexApi(apikey string, apisecret string) (*OkexApi, error) {
+func NewOkexApi(apikey func() (string, error), apisecret func() (string, error)) (*OkexApi, error) {
 	hitbtcPublic, err := public.NewOkexPublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -45,8 +45,8 @@ func NewOkexApi(apikey string, apisecret string) (*OkexApi, error) {
 	return &OkexApi{
 		BaseURL:           OKEX_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -58,8 +58,8 @@ func NewOkexApi(apikey string, apisecret string) (*OkexApi, error) {
 }
 
 type OkexApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -78,13 +78,22 @@ func (o *OkexApi) privateApiUrl() string {
 }
 
 func (o *OkexApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
-	params.Set("AccessKeyId", o.ApiKey)
+
+	apiKey, err := o.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secretKey, err := o.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	params.Set("AccessKeyId", apiKey)
 	params.Set("SignatureMethod", "HmacSHA256")
 	params.Set("SignatureVersion", "2")
 	params.Set("Timestamp", time.Now().UTC().Format("2006-01-02T15:04:05"))
 	domain := strings.Replace(o.BaseURL, "https://", "", len(o.BaseURL))
 	payload := fmt.Sprintf("%s\n%s\n%s\n%s", method, domain, path, params.Encode())
-	sign, _ := GetParamHmacSHA256Base64Sign(o.SecretKey, payload)
+	sign, _ := GetParamHmacSHA256Base64Sign(secretKey, payload)
 	params.Set("Signature", sign)
 	urlStr := o.BaseURL + path + "?" + params.Encode()
 	resBody, err := NewHttpRequest(&http.Client{}, method, urlStr, "", nil)

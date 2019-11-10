@@ -21,7 +21,7 @@ const (
 	LBANK_BASE_URL = "https://api.lbkex.com"
 )
 
-func NewLbankApi(apikey string, apisecret string) (*LbankApi, error) {
+func NewLbankApi(apikey func() (string, error), apisecret func() (string, error)) (*LbankApi, error) {
 	hitbtcPublic, err := public.NewLbankPublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -46,8 +46,8 @@ func NewLbankApi(apikey string, apisecret string) (*LbankApi, error) {
 	return &LbankApi{
 		BaseURL:           LBANK_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -59,8 +59,8 @@ func NewLbankApi(apikey string, apisecret string) (*LbankApi, error) {
 }
 
 type LbankApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -79,8 +79,17 @@ func (h *LbankApi) privateApiUrl() string {
 }
 
 func (h *LbankApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
-	params.Set("api_key", h.ApiKey)
-	queryString := params.Encode() + "&secret_key=" + h.SecretKey
+
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secretKey, err := h.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	params.Set("api_key", apiKey)
+	queryString := params.Encode() + "&secret_key=" + secretKey
 	sign, _ := GetMd5HashSign(queryString)
 	params.Set("sign", strings.ToUpper(sign))
 

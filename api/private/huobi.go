@@ -20,7 +20,7 @@ const (
 	HUOBI_BASE_URL = "https://api.huobi.pro"
 )
 
-func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
+func NewHuobiApi(apikey func() (string, error), apisecret func() (string, error)) (*HuobiApi, error) {
 	hitbtcPublic, err := public.NewHuobiPublicApi()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize public client")
@@ -45,8 +45,8 @@ func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
 	return &HuobiApi{
 		BaseURL:           HUOBI_BASE_URL,
 		RateCacheDuration: 30 * time.Second,
-		ApiKey:            apikey,
-		SecretKey:         apisecret,
+		ApiKeyFunc:        apikey,
+		SecretKeyFunc:     apisecret,
 		settlements:       uniq,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -58,8 +58,8 @@ func NewHuobiApi(apikey string, apisecret string) (*HuobiApi, error) {
 }
 
 type HuobiApi struct {
-	ApiKey            string
-	SecretKey         string
+	ApiKeyFunc        func() (string, error)
+	SecretKeyFunc     func() (string, error)
 	BaseURL           string
 	RateCacheDuration time.Duration
 	HttpClient        http.Client
@@ -78,13 +78,22 @@ func (h *HuobiApi) privateApiUrl() string {
 }
 
 func (h *HuobiApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
-	params.Set("AccessKeyId", h.ApiKey)
+
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	secretKey, err := h.SecretKeyFunc()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	params.Set("AccessKeyId", apiKey)
 	params.Set("SignatureMethod", "HmacSHA256")
 	params.Set("SignatureVersion", "2")
 	params.Set("Timestamp", time.Now().UTC().Format("2006-01-02T15:04:05"))
 	domain := strings.Replace(h.BaseURL, "https://", "", len(h.BaseURL))
 	payload := fmt.Sprintf("%s\n%s\n%s\n%s", method, domain, path, params.Encode())
-	sign, _ := GetParamHmacSHA256Base64Sign(h.SecretKey, payload)
+	sign, _ := GetParamHmacSHA256Base64Sign(secretKey, payload)
 	params.Set("Signature", sign)
 	urlStr := h.BaseURL + path + "?" + params.Encode()
 	resBody, err := NewHttpRequest(&http.Client{}, method, urlStr, "", nil)

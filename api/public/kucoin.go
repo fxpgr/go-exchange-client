@@ -145,10 +145,10 @@ func (h *KucoinApi) fetchPrecision() error {
 		highPrecision := Precision(v.Get("high").Str)
 		lowPrecision := Precision(v.Get("low").Str)
 		volPrecision := Precision(v.Get("vol").Str)
-		precisionArray := []int{buyPrecision, sellPrecision,highPrecision,lowPrecision}
+		precisionArray := []int{buyPrecision, sellPrecision, highPrecision, lowPrecision}
 		maxPrecision := 0
-		for _,v := range precisionArray {
-			if v>maxPrecision {
+		for _, v := range precisionArray {
+			if v > maxPrecision {
 				maxPrecision = v
 			}
 		}
