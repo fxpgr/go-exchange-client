@@ -1,23 +1,24 @@
 package private
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"bytes"
-	"fmt"
 	"github.com/fxpgr/go-exchange-client/api/public"
+	"github.com/fxpgr/go-exchange-client/helpers"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -45,9 +46,10 @@ func NewBinanceApi(apikey func() (string, error), apisecret func() (string, erro
 			uniq = append(uniq, ele)
 		}
 	}
-
-	return &BinanceApi{
+	b := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
+		apiV1:             BINANCE_BASE_URL + "/api/v1/",
+		apiV3:             BINANCE_BASE_URL + "/api/v3/",
 		RateCacheDuration: 30 * time.Second,
 		ApiKeyFunc:        apikey,
 		SecretKeyFunc:     apisecret,
@@ -59,7 +61,9 @@ func NewBinanceApi(apikey func() (string, error), apisecret func() (string, erro
 
 		m:         new(sync.Mutex),
 		currencyM: new(sync.Mutex),
-	}, nil
+	}
+	b.setTimeOffset()
+	return b, nil
 }
 
 type BinanceApi struct {
@@ -70,6 +74,9 @@ type BinanceApi struct {
 	HttpClient        http.Client
 	rt                *http.Transport
 	settlements       []string
+	apiV1             string
+	apiV3             string
+	timeoffset        int64
 
 	volumeMap       map[string]map[string]float64
 	rateMap         map[string]map[string]float64
@@ -280,41 +287,79 @@ func (sm *binanceTransferFeeSyncMap) GetAll() map[string]float64 {
 }
 
 func (h *BinanceApi) TransferFee() (map[string]float64, error) {
-	url := BINANCE_BASE_URL + "/wapi/v3/assetDetail.html"
-	resp, err := h.HttpClient.Get(url)
+	params := url.Values{}
+	h.buildParamsSigned(&params)
+	apiKey, err := h.ApiKeyFunc()
+	if err != nil {
+		return nil, err
+	}
+	path := h.BaseURL + "/wapi/v3/assetDetail.html" + params.Encode()
+	respmap, err := helpers.HttpGet2(&h.HttpClient, path, map[string]string{"X-MBX-APIKEY": apiKey})
+	fmt.Println(respmap)
 	transferFeeMap := binanceTransferFeeSyncMap{make(binanceTransferFeeMap), new(sync.Mutex)}
-	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to fetch %s", url)
+	ad := respmap["assetDetail"]
+	if ad == nil {
+		return nil, errors.New("nothing trade balance")
 	}
-	defer resp.Body.Close()
-
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return transferFeeMap.GetAll(), errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	value := gjson.ParseBytes(byteArray)
-	for k, v := range value.Get("assetDetail").Map() {
-		feef := v.Get("withdrawFee").Num
-		transferFeeMap.Set(strings.ToUpper(k), feef)
+	adv := ad.(map[string]interface{})
+	for k, v := range adv {
+		vv := v.(map[string]interface{})
+		fee := vv["withdrawFee"].(float64)
+		transferFeeMap.Set(strings.ToUpper(k), fee)
 	}
 	return transferFeeMap.GetAll(), nil
 }
 
+const SERVER_TIME_URL = "time"
+
+func (bn *BinanceApi) setTimeOffset() error {
+	respmap, err := helpers.HttpGet(&bn.HttpClient, bn.apiV1+SERVER_TIME_URL)
+	if err != nil {
+		return err
+	}
+
+	stime := int64(helpers.ToInt(respmap["serverTime"]))
+	st := time.Unix(stime/1000, 1000000*(stime%1000))
+	lt := time.Now()
+	offset := st.Sub(lt).Nanoseconds()
+	bn.timeoffset = int64(offset)
+	return nil
+}
+
+func (bn *BinanceApi) buildParamsSigned(postForm *url.Values) error {
+	secretKey, err := bn.SecretKeyFunc()
+	if err != nil {
+		return err
+	}
+	postForm.Set("recvWindow", "60000")
+	tonce := strconv.FormatInt(time.Now().UnixNano()+bn.timeoffset, 10)[0:13]
+	postForm.Set("timestamp", tonce)
+	payload := postForm.Encode()
+	sign, _ := helpers.GetParamHmacSHA256Sign(secretKey, payload)
+	postForm.Set("signature", sign)
+	return nil
+}
+
+const ACCOUNT_URI = "account?"
+
 func (h *BinanceApi) Balances() (map[string]float64, error) {
-	params := &url.Values{}
-	byteArray, err := h.privateApi("GET", "/api/v3/account", params)
+	params := url.Values{}
+	h.buildParamsSigned(&params)
+	apiKey, err := h.ApiKeyFunc()
 	if err != nil {
 		return nil, err
 	}
-	value := gjson.ParseBytes(byteArray)
+	path := h.apiV3 + ACCOUNT_URI + params.Encode()
+	respmap, err := helpers.HttpGet2(&h.HttpClient, path, map[string]string{"X-MBX-APIKEY": apiKey})
 
 	m := make(map[string]float64)
-	for _, v := range value.Get("balances").Array() {
-		currency := v.Get("asset").Str
-		free := v.Get("free").Float()
-		//locked := v.Get("locked").Float()
+
+	balances := respmap["balances"].([]interface{})
+	for _, v := range balances {
+		vv := v.(map[string]interface{})
+		currency := vv["asset"].(string)
 		currency = strings.ToUpper(currency)
-		m[currency] = free
+		m[currency] = helpers.ToFloat64(vv["free"])
 	}
 	return m, nil
 }
@@ -325,51 +370,39 @@ type BinanceBalance struct {
 }
 
 func (h *BinanceApi) CompleteBalances() (map[string]*models.Balance, error) {
-	params := &url.Values{}
-	byteArray, err := h.privateApi("GET", "/api/v3/account", params)
+	params := url.Values{}
+	h.buildParamsSigned(&params)
+	apiKey, err := h.ApiKeyFunc()
 	if err != nil {
 		return nil, err
 	}
-	value := gjson.ParseBytes(byteArray)
+	path := h.apiV3 + ACCOUNT_URI + params.Encode()
+	respmap, err := helpers.HttpGet2(&h.HttpClient, path, map[string]string{"X-MBX-APIKEY": apiKey})
 
 	m := make(map[string]*models.Balance)
-	for _, v := range value.Get("balances").Array() {
-		currency := v.Get("asset").Str
-		free := v.Get("free").Float()
-		locked := v.Get("locked").Float()
+	balances := respmap["balances"].([]interface{})
+	for _, v := range balances {
+		vv := v.(map[string]interface{})
+		currency := vv["asset"].(string)
 		currency = strings.ToUpper(currency)
 		m[currency] = &models.Balance{
-			Available: free,
-			OnOrders:  locked,
+			Available: helpers.ToFloat64(vv["free"]),
+			OnOrders:  helpers.ToFloat64(vv["locked"]),
 		}
 	}
 	return m, nil
 }
 
 func (h *BinanceApi) CompleteBalance(coin string) (*models.Balance, error) {
-	params := &url.Values{}
-	byteArray, err := h.privateApi("GET", "/api/v3/account", params)
+	m, err := h.CompleteBalances()
 	if err != nil {
 		return nil, err
 	}
-	value := gjson.ParseBytes(byteArray)
-
-	m := &models.Balance{
-		Available: 0,
-		OnOrders:  0,
+	b, ok := m[coin]
+	if !ok {
+		return nil, errors.Errorf("no coin %s", coin)
 	}
-	for _, v := range value.Get("balances").Array() {
-		if v.Get("asset").Str == coin {
-			free := v.Get("free").Float()
-			locked := v.Get("locked").Float()
-			m = &models.Balance{
-				Available: free,
-				OnOrders:  locked,
-			}
-			break
-		}
-	}
-	return m, nil
+	return b, nil
 }
 
 type BinanceActiveOrderResponse struct {

@@ -3,19 +3,18 @@ package main
 import (
 	"fmt"
 
-	"github.com/fxpgr/go-exchange-client/api/public"
+	"github.com/fxpgr/go-exchange-client/api/private"
 )
 
 func main() {
-	cli, err := public.NewClient("kucoin")
+	pcli, err := private.NewClient(private.PROJECT, "binance", func() (string, error) {
+		return "", nil
+	}, func() (s string, err error) {
+		return "", nil
+	})
 	if err != nil {
 		fmt.Println(err)
 		panic(err)
 	}
-	board, err := cli.Precise("OCN", "BTC")
-	if err != nil {
-		fmt.Println(err)
-		panic(err)
-	}
-	fmt.Println(board)
+	fmt.Println(pcli.TransferFee())
 }

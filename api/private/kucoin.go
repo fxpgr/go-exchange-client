@@ -1,6 +1,9 @@
 package private
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -8,7 +11,6 @@ import (
 	"time"
 
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -173,10 +175,15 @@ func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisio
 }
 func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
 
-	apiKey, err := h.ApiKeyFunc()
+	apiFraseAndKey, err := h.ApiKeyFunc()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
+	slice := strings.Split(apiFraseAndKey, "::")
+	if len(slice) != 2 {
+		errors.New("invalid passphrase")
+	}
+	phrase, apiKey := slice[0], slice[1]
 	secretKey, err := h.SecretKeyFunc()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
@@ -193,17 +200,21 @@ func (h *KucoinApi) privateApi(method string, path string, params *url.Values) (
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
 	req.Header.Set("Accept", "application/json")
-
-	nonce := time.Now().UnixNano() / int64(time.Millisecond)
-
-	strForSign := fmt.Sprintf("%s/%v/%s", path, nonce, params.Encode())
-	signatureStr := base64.StdEncoding.EncodeToString([]byte(strForSign))
-	signature := computeHmac256(signatureStr, secretKey)
+	var b bytes.Buffer
+	b.WriteString(method)
+	b.WriteString(path)
+	b.WriteString(params.Encode())
+	t := strconv.FormatInt((time.Now().UnixNano() / 1000000), 10)
+	p := []byte(t + b.String())
+	hm := hmac.New(sha256.New, []byte(secretKey))
+	hm.Write(p)
+	s := base64.StdEncoding.EncodeToString(hm.Sum(nil))
 	req.Header.Set("KC-API-KEY", apiKey)
-	req.Header.Set("KC-API-NONCE", fmt.Sprintf("%v", nonce))
+	req.Header.Set("KC-API-TIMESTAMP", t)
 	req.Header.Set(
-		"KC-API-SIGNATURE", signature,
+		"KC-API-SIGN", s,
 	)
+	req.Header.Set("KC-API-PASSPHRASE", phrase)
 	res, err := h.HttpClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to request command %s", path)
@@ -308,9 +319,13 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	transferFeeMap := kucoinTransferFeeSyncMap{make(kucoinTransferFeeMap), new(sync.Mutex)}
+	transferFeeMap := kucoinTransferFeeSyncMap{make(map[string]float64), new(sync.Mutex)}
 	for _, v := range data {
-		feef, err := v.GetFloat64("withdrawMinFee")
+		fees, err := v.GetString("withdrawalMinFee")
+		if err != nil {
+			continue
+		}
+		feef, err := strconv.ParseFloat(fees, 64)
 		if err != nil {
 			continue
 		}
@@ -320,6 +335,7 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 		}
 		transferFeeMap.Set(strings.ToUpper(coin), feef)
 	}
+	fmt.Println(transferFeeMap)
 	return transferFeeMap.GetAll(), nil
 }
 
@@ -339,13 +355,21 @@ func (h *KucoinApi) Balances() (map[string]float64, error) {
 		return nil, errors.Wrapf(err, "failed to parse json key data %s", json)
 	}
 	for _, v := range data {
-		balance, err := v.GetFloat64("balance")
+		balanceStr, err := v.GetString("balance")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse balance on %s", json)
 		}
-		available, err := v.GetFloat64("available")
+		balance, err := strconv.ParseFloat(balanceStr, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse balance on %s", json)
+		}
+		availableStr, err := v.GetString("available")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse available on %s", json)
+		}
+		available, err := strconv.ParseFloat(availableStr, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse balance on %s", json)
 		}
 		freeze := balance - available
 		currency, err := v.GetString("currency")
