@@ -174,10 +174,12 @@ func (h *KucoinApi) precise(trading string, settlement string) (*models.Precisio
 	}
 }
 func (h *KucoinApi) privateApi(method string, path string, params *url.Values) ([]byte, error) {
-
 	apiFraseAndKey, err := h.ApiKeyFunc()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+	}
+	if !strings.Contains(apiFraseAndKey,"::"){
+		errors.New("invalid passphrase")
 	}
 	sli := strings.SplitN(apiFraseAndKey, "::",2)
 	if len(sli) < 2 {
