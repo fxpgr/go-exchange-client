@@ -179,7 +179,7 @@ func (h *KucoinApi) privateApi(method string, path string, params *url.Values) (
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create request command %s", path)
 	}
-	slice := strings.Split(apiFraseAndKey, "::")
+	slice := strings.SplitN(apiFraseAndKey, "::",2)
 	if len(slice) != 2 {
 		errors.New("invalid passphrase")
 	}
