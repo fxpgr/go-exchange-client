@@ -259,7 +259,6 @@ func (h *KucoinApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 			traderFeeMap[trading] = m
 		}
 		m[settlement] = TradeFee{feeRate, feeRate}
-
 	}
 	return traderFeeMap, nil
 }

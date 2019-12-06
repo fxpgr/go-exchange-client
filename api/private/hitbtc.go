@@ -73,6 +73,10 @@ type HitbtcApi struct {
 	m *sync.Mutex
 }
 
+func (h *HitbtcApi) publicApiUrl(command string) string {
+	return h.BaseURL + "/api/2/public/" + command
+}
+
 func (h *HitbtcApi) privateApiUrl() string {
 	return h.BaseURL
 }
@@ -173,12 +177,17 @@ func (b *HitbtcApi) TradeFeeRate(trading string, settlement string) (TradeFee, e
 }
 
 func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
-	purchaseFeeurl := "/api/2/public/currency"
-	method := "GET"
-	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
+	url := h.publicApiUrl("currency")
+	resp, err := h.HttpClient.Get(url)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed")
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
+	defer resp.Body.Close()
+	resBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+
 	json, err := gabs.ParseJSON(resBody)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
