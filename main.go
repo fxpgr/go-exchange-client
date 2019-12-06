@@ -16,5 +16,5 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Println(pcli.TransferFee())
+	fmt.Println(pcli.Balances())
 }

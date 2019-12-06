@@ -192,7 +192,56 @@ func (h *BinanceApi) privateApi(method string, path string, params *url.Values) 
 	}
 	return resBody, err
 }
-
+func (h *BinanceApi) coins() ([]string,error) {
+	h.currencyM.Lock()
+	defer h.currencyM.Unlock()
+	coins := make([]string,0)
+	if len(h.currencyPairs) != 0 {
+		coinsWithDup := make([]string,0)
+		for _,v := range h.currencyPairs {
+			coinsWithDup=append(coinsWithDup,v.Settlement)
+			coinsWithDup=append(coinsWithDup,v.Trading)
+		}
+		m := make(map[string]struct{})
+		for _, element := range coinsWithDup {
+			// mapでは、第二引数にその値が入っているかどうかの真偽値が入っている
+			if _, ok := m[element]; !ok {
+				m[element] = struct{}{}
+				coins = append(coins, element)
+			}
+		}
+		return coins, nil
+	}
+	url := h.publicApiUrl("/api/v1/exchangeInfo")
+	req, err := requestGetAsChrome(url)
+	if err != nil {
+		return coins, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	resp, err := h.HttpClient.Do(req)
+	if err != nil {
+		return coins, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	defer resp.Body.Close()
+	byteArray, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return coins, errors.Wrapf(err, "failed to fetch %s", url)
+	}
+	value := gjson.ParseBytes(byteArray)
+	coinsWithDup := make([]string,0)
+	for _,v:= range value.Get("symbols").Array() {
+		coinsWithDup = append(coinsWithDup, v.Get("baseAsset").String())
+		coinsWithDup = append(coinsWithDup, v.Get("quoteAsset").String())
+	}
+	m := make(map[string]struct{})
+	for _, element := range coinsWithDup {
+		// mapでは、第二引数にその値が入っているかどうかの真偽値が入っている
+		if _, ok := m[element]; !ok {
+			m[element] = struct{}{}
+			coins = append(coins, element)
+		}
+	}
+	return coins,nil
+}
 func (h *BinanceApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	h.currencyM.Lock()
 	defer h.currencyM.Unlock()
@@ -555,8 +604,17 @@ func (h *BinanceApi) Balances() (map[string]float64, error) {
 	}
 	path := h.apiV3 + ACCOUNT_URI + params.Encode()
 	respmap, err := helpers.HttpGet2(&h.HttpClient, path, map[string]string{"X-MBX-APIKEY": apiKey})
-
+	if err != nil {
+		return nil,err
+	}
 	m := make(map[string]float64)
+	coins,err := h.coins()
+	if err != nil {
+		return nil,err
+	}
+	for _,v := range coins {
+		m[v] = 0
+	}
 
 	balances := respmap["balances"].([]interface{})
 	for _, v := range balances {
