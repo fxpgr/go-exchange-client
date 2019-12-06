@@ -185,7 +185,6 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 	}
-	fmt.Println(json)
 	currencyMap, err := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))

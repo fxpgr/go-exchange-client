@@ -335,7 +335,6 @@ func (h *KucoinApi) TransferFee() (map[string]float64, error) {
 		}
 		transferFeeMap.Set(strings.ToUpper(coin), feef)
 	}
-	fmt.Println(transferFeeMap)
 	return transferFeeMap.GetAll(), nil
 }
 

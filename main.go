@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	pcli, err := private.NewClient(private.PROJECT, "binance", func() (string, error) {
+	pcli, err := private.NewClient(private.PROJECT, "hitbtc", func() (string, error) {
 		return "", nil
 	}, func() (s string, err error) {
 		return "", nil
@@ -16,5 +16,5 @@ func main() {
 		fmt.Println(err)
 		panic(err)
 	}
-	fmt.Println(pcli.Balances())
+	fmt.Println(pcli.TransferFee())
 }
