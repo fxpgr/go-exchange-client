@@ -78,26 +78,24 @@ func (h *HitbtcApi) privateApiUrl() string {
 }
 
 func (h *HitbtcApi) privateApi(method string, path string, args map[string]string) ([]byte, error) {
-
 	val := url.Values{}
 	if args != nil {
 		for k, v := range args {
 			val.Add(k, v)
 		}
 	}
-
 	reader := bytes.NewReader([]byte(val.Encode()))
 	req, err := http.NewRequest(method, h.privateApiUrl()+path, reader)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+		return nil, errors.Wrapf(err, "failed to create request command on newRequest %s", path)
 	}
 	apiKey, err := h.ApiKeyFunc()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+		return nil, errors.Wrapf(err, "failed to create request command on get apikey%s", path)
 	}
 	secKey, err := h.SecretKeyFunc()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create request command %s", path)
+		return nil, errors.Wrapf(err, "failed to create request command on get seckey %s", path)
 	}
 	req.SetBasicAuth(apiKey, secKey)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -179,7 +177,7 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	method := "GET"
 	resBody, err := h.privateApi(method, purchaseFeeurl, map[string]string{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed")
 	}
 	json, err := gabs.ParseJSON(resBody)
 	if err != nil {

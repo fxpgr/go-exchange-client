@@ -8,9 +8,9 @@ import (
 
 func main() {
 	pcli, err := private.NewClient(private.PROJECT, "hitbtc", func() (string, error) {
-		return "", nil
+		return "test", nil
 	}, func() (s string, err error) {
-		return "", nil
+		return "????", nil
 	})
 	if err != nil {
 		fmt.Println(err)
