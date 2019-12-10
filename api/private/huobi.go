@@ -1,19 +1,18 @@
 package private
 
 import (
-	"io/ioutil"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"fmt"
 	"github.com/antonholmquist/jason"
 	"github.com/fxpgr/go-exchange-client/api/public"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -150,61 +149,123 @@ func (sm *huobiTransferFeeSyncMap) GetAll() map[string]float64 {
 }
 
 func (h *HuobiApi) TransferFee() (map[string]float64, error) {
-	cli, err := public.NewClient("huobi")
-	if err != nil {
-		return nil, err
-	}
-	currencies, err := cli.FrozenCurrency()
-	if err != nil {
-		return nil, err
-	}
-	ch := make(chan *HuobiTransferFeeResponse, len(currencies))
-	workers := make(chan int, 10)
-	wg := &sync.WaitGroup{}
-	for _, c := range currencies {
-		wg.Add(1)
-		workers <- 1
-		go func(currency string) {
-			defer wg.Done()
-			args := url.Values{}
-			args.Add("currency", strings.ToLower(currency))
-			url := h.BaseURL + "/v1/dw/withdraw-virtual/fee-range?" + args.Encode()
-			cli := &http.Client{Transport: h.rt}
-			resp, err := cli.Get(url)
-			if err != nil {
-				ch <- &HuobiTransferFeeResponse{nil, currency, err}
-				return
-			}
-			defer resp.Body.Close()
-			byteArray, err := ioutil.ReadAll(resp.Body)
-			ch <- &HuobiTransferFeeResponse{byteArray, currency, err}
-			<-workers
-		}(c)
-	}
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-	transferMap := huobiTransferFeeSyncMap{make(huobiTransferFeeMap), new(sync.Mutex)}
-	for r := range ch {
-		if r.err != nil {
-			continue
-		}
-		json, err := jason.NewObjectFromBytes(r.response)
-		if err != nil {
-			continue
-		}
-		data, err := json.GetObject("data")
-		if err != nil {
-			continue
-		}
-		amount, err := data.GetFloat64("default-amount")
-		if err != nil {
-			continue
-		}
-		transferMap.Set(r.Currency, amount)
-	}
-	return transferMap.GetAll(), nil
+	transferFeeMap := huobiTransferFeeSyncMap{make(huobiTransferFeeMap), new(sync.Mutex)}
+	transferFeeMap.Set("ZRX", 10)
+	transferFeeMap.Set("ACT", 0.01)
+	transferFeeMap.Set("ADX", 0.002)
+	transferFeeMap.Set("ELF", 0.002)
+	transferFeeMap.Set("AIDOC", 143)
+	transferFeeMap.Set("AST", 0.01)
+	transferFeeMap.Set("SOC", 0.01)
+	transferFeeMap.Set("APPC", 0.002)
+	transferFeeMap.Set("ABT", 0.002)
+	transferFeeMap.Set("BAT", 0.02)
+	transferFeeMap.Set("BFT", 0.01)
+	transferFeeMap.Set("BIX", 0.01)
+	transferFeeMap.Set("BTC", 0.01)
+	transferFeeMap.Set("BCH", 92)
+	transferFeeMap.Set("BCD", 0.002)
+	transferFeeMap.Set("BTG", 5)
+	transferFeeMap.Set("BT2", 0.002)
+	transferFeeMap.Set("BIFI", 8.5)
+	transferFeeMap.Set("BCX", 0.002)
+	transferFeeMap.Set("BT1", 0.05)
+	transferFeeMap.Set("BTS", 0.002)
+	transferFeeMap.Set("BLZ", 0.002)
+	transferFeeMap.Set("BTM", 0.002)
+	transferFeeMap.Set("ADA", 0.001)
+	transferFeeMap.Set("LINK", 296.3)
+	transferFeeMap.Set("CHAT", 0.01)
+	transferFeeMap.Set("CVC", 0.002)
+	transferFeeMap.Set("CMT", 0.001)
+	transferFeeMap.Set("DASH", 1.5)
+	transferFeeMap.Set("DTA", 0.01)
+	transferFeeMap.Set("DAT", 0.002)
+	transferFeeMap.Set("MANA", 1)
+	transferFeeMap.Set("DCR", 1082)
+	transferFeeMap.Set("DBC", 0.002)
+	transferFeeMap.Set("DGB", 0.002)
+	transferFeeMap.Set("DGD", 2)
+	transferFeeMap.Set("EKO", 0.01)
+	transferFeeMap.Set("ELA", 4)
+	transferFeeMap.Set("ENG", 0.01)
+	transferFeeMap.Set("EOS", 8.6)
+	transferFeeMap.Set("ETH", 0.002)
+	transferFeeMap.Set("ETC", 0.002)
+	transferFeeMap.Set("ETF", 0.002)
+	transferFeeMap.Set("EVX", 0.2)
+	transferFeeMap.Set("GAS", 4)
+	transferFeeMap.Set("GNX", 1294)
+	transferFeeMap.Set("GNT", 0.01)
+	transferFeeMap.Set("GXS", 0.5)
+	transferFeeMap.Set("HSR", 30)
+	transferFeeMap.Set("HT", 0.01)
+	transferFeeMap.Set("ICX", 0.002)
+	transferFeeMap.Set("IOST", 1)
+	transferFeeMap.Set("ITC", 7)
+	transferFeeMap.Set("MIOTA", 0.01)
+	transferFeeMap.Set("KNC", 0.04)
+	transferFeeMap.Set("LET", 0.002)
+	transferFeeMap.Set("LSK", 3)
+	transferFeeMap.Set("LTC", 20)
+	transferFeeMap.Set("LUN", 0.1)
+	transferFeeMap.Set("MTX", 0.002)
+	transferFeeMap.Set("MTN", 0.1)
+	transferFeeMap.Set("MDS", 0.0001)
+	transferFeeMap.Set("MTL", 0.01)
+	transferFeeMap.Set("MCO", 0.01)
+	transferFeeMap.Set("XMR", 2)
+	transferFeeMap.Set("NAS", 0.05)
+	transferFeeMap.Set("XEM", 0.01)
+	transferFeeMap.Set("NEO", 1)
+	transferFeeMap.Set("OCN", 0.0001)
+	transferFeeMap.Set("OMG", 0.01)
+	transferFeeMap.Set("ONT", 0.01)
+	transferFeeMap.Set("POLY", 0.01)
+	transferFeeMap.Set("POWR", 0.01)
+	transferFeeMap.Set("PRO", 0.002)
+	transferFeeMap.Set("QASH", 1)
+	transferFeeMap.Set("QTUM", 10)
+	transferFeeMap.Set("QSP", 0.001)
+	transferFeeMap.Set("QUN", 7)
+	transferFeeMap.Set("RDN", 0.1)
+	transferFeeMap.Set("RPX", 0.002)
+	transferFeeMap.Set("REQ", 0.001)
+	transferFeeMap.Set("RCN", 0.01)
+	transferFeeMap.Set("XRP", 0.01)
+	transferFeeMap.Set("RUFF", 10)
+	transferFeeMap.Set("SALT", 0.5)
+	transferFeeMap.Set("OST", 0.01)
+	transferFeeMap.Set("SRN", 0.01)
+	transferFeeMap.Set("SMT", 0.1)
+	transferFeeMap.Set("SNT", 61)
+	transferFeeMap.Set("STEEM", 0.01)
+	transferFeeMap.Set("XLM", 3.6)
+	transferFeeMap.Set("STK", 1)
+	transferFeeMap.Set("STORJ", 0.2)
+	transferFeeMap.Set("SNC", 0.5)
+	transferFeeMap.Set("SBTC", 0.002)
+	transferFeeMap.Set("SWFTC", 1.7)
+	transferFeeMap.Set("PAY", 0.002)
+	transferFeeMap.Set("USDT", 0.01)
+	transferFeeMap.Set("THETA", 0.01)
+	transferFeeMap.Set("TNT", 0.01)
+	transferFeeMap.Set("TNB", 88)
+	transferFeeMap.Set("TRX", 0.0005)
+	transferFeeMap.Set("UTK", 0.001)
+	transferFeeMap.Set("VEN", 0.01)
+	transferFeeMap.Set("XVG", 0.1)
+	transferFeeMap.Set("WTC", 1)
+	transferFeeMap.Set("WAN", 15)
+	transferFeeMap.Set("WAVES", 10)
+	transferFeeMap.Set("WAX", 0.01)
+	transferFeeMap.Set("WIC", 0.002)
+	transferFeeMap.Set("WPR", 10)
+	transferFeeMap.Set("YEE", 0.002)
+	transferFeeMap.Set("ZEC", 0.6)
+	transferFeeMap.Set("ZLA", 0.01)
+	transferFeeMap.Set("ZIL", 0.01)
+	return transferFeeMap.GetAll(), nil
 }
 
 func (h *HuobiApi) Balances() (map[string]float64, error) {
