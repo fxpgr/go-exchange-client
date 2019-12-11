@@ -9,6 +9,7 @@ import (
 
 	"encoding/json"
 	"github.com/antonholmquist/jason"
+	"github.com/fxpgr/go-exchange-client/api/unified"
 	"github.com/fxpgr/go-exchange-client/logger"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/pkg/errors"
@@ -22,6 +23,10 @@ const (
 )
 
 func NewPoloniexPublicApi() (*PoloniexApi, error) {
+	shrimpyApi, err := unified.NewShrimpyApi()
+	if err != nil {
+		return nil, err
+	}
 	api := &PoloniexApi{
 		BaseURL:           POLONIEX_BASE_URL,
 		RateCacheDuration: 3 * time.Second,
@@ -30,6 +35,7 @@ func NewPoloniexPublicApi() (*PoloniexApi, error) {
 		orderBookTickMap:  nil,
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		HttpClient:        http.Client{},
+		ShrimpyClient:     shrimpyApi,
 
 		m: new(sync.Mutex),
 	}
@@ -55,6 +61,7 @@ type PoloniexApi struct {
 	precisionMap      map[string]map[string]models.Precisions
 	rateLastUpdated   time.Time
 	HttpClient        http.Client
+	ShrimpyClient     *unified.ShrimpyApiClient
 
 	m *sync.Mutex
 }
@@ -264,18 +271,43 @@ func (p *PoloniexApi) Precise(trading string, settlement string) (*models.Precis
 	}
 }
 
-func (p *PoloniexApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
-	p.m.Lock()
-	defer p.m.Unlock()
+func (h *PoloniexApi) fetchOrderBookTick() error {
+	boardMap, err := h.ShrimpyClient.GetBoards("poloniex")
+	if err != nil {
+		return err
+	}
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
+	for settlement, m := range boardMap {
+		for trading, value := range m {
+			l, ok := orderBookTickMap[trading]
+			if !ok {
+				l = make(map[string]models.OrderBookTick)
+				orderBookTickMap[trading] = l
+			}
+			l[settlement] = models.OrderBookTick{
+				BestAskPrice:  value.BestAskPrice(),
+				BestAskAmount: value.BestAskAmount(),
+				BestBidPrice:  value.BestBidPrice(),
+				BestBidAmount: value.BestBidAmount(),
+			}
+		}
+	}
+	h.orderBookTickMap = orderBookTickMap
+	return nil
+}
+
+func (h *PoloniexApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
 	now := time.Now()
-	if now.Sub(p.rateLastUpdated) >= p.RateCacheDuration {
-		err := p.fetchRate()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchOrderBookTick()
 		if err != nil {
 			return nil, err
 		}
-		p.rateLastUpdated = now
+		h.rateLastUpdated = now
 	}
-	return p.orderBookTickMap, nil
+	return h.orderBookTickMap, nil
 }
 
 func (p *PoloniexApi) RateMap() (map[string]map[string]float64, error) {

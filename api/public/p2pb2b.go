@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/Jeffail/gabs"
-	"github.com/antonholmquist/jason"
-	"github.com/fxpgr/go-exchange-client/api/unified"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
@@ -18,19 +16,15 @@ import (
 )
 
 const (
-	HITBTC_BASE_URL = "https://api.hitbtc.com/api/2"
+	P2PB2B_BASE_URL = "https://api.p2pb2b.io/api/v1"
 )
 
-type HitbtcApiConfig struct {
+type P2pb2bApiConfig struct {
 }
 
-func NewHitbtcPublicApi() (*HitbtcApi, error) {
-	shrimpyApi, err := unified.NewShrimpyApi()
-	if err != nil {
-		return nil, err
-	}
-	api := &HitbtcApi{
-		BaseURL:           HITBTC_BASE_URL,
+func NewP2pb2bPublicApi() (*P2pb2bApi, error) {
+	api := &P2pb2bApi{
+		BaseURL:           P2PB2B_BASE_URL,
 		RateCacheDuration: 3 * time.Second,
 		rateMap:           nil,
 		volumeMap:         nil,
@@ -39,7 +33,6 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{},
-		ShrimpyClient:     shrimpyApi,
 
 		m: new(sync.Mutex),
 	}
@@ -47,7 +40,7 @@ func NewHitbtcPublicApi() (*HitbtcApi, error) {
 	return api, nil
 }
 
-type HitbtcApi struct {
+type P2pb2bApi struct {
 	BaseURL           string
 	RateCacheDuration time.Duration
 	volumeMap         map[string]map[string]float64
@@ -57,26 +50,25 @@ type HitbtcApi struct {
 	rateLastUpdated   time.Time
 	boardCache        *cache.Cache
 	HttpClient        *http.Client
-	ShrimpyClient     *unified.ShrimpyApiClient
 
 	settlements []string
 
 	m *sync.Mutex
-	c *HitbtcApiConfig
+	c *P2pb2bApiConfig
 }
 
-func (h *HitbtcApi) SetTransport(transport http.RoundTripper) error {
+func (h *P2pb2bApi) SetTransport(transport http.RoundTripper) error {
 	h.HttpClient.Transport = transport
 	return nil
 }
 
-func (h *HitbtcApi) publicApiUrl(command string) string {
-	return h.BaseURL + "/public/" + command
+func (h *P2pb2bApi) publicApiUrl(command string) string {
+	return h.BaseURL + "/" + command
 }
 
-func (h *HitbtcApi) fetchSettlements() error {
+func (h *P2pb2bApi) fetchSettlements() error {
 	settlements := make([]string, 0)
-	url := h.publicApiUrl("symbol")
+	url := h.publicApiUrl("public/products")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -92,16 +84,12 @@ func (h *HitbtcApi) fetchSettlements() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
-
-	pairMap, err := json.Children()
+	pairs, err := json.Path("result").Children()
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
-	for _, v := range pairMap {
-		settlement, ok := v.Path("quoteCurrency").Data().(string)
-		if !ok {
-			continue
-		}
+	for _, v := range pairs {
+		settlement := v.Path("toSymbol").String()
 		settlements = append(settlements, settlement)
 	}
 	m := make(map[string]bool)
@@ -116,21 +104,13 @@ func (h *HitbtcApi) fetchSettlements() error {
 	return nil
 }
 
-func Precision(numStr string) int {
-	numStrArr := strings.Split(numStr, ".")
-	if len(numStrArr) != 2 {
-		return 0
-	}
-	return len(numStrArr[1])
-}
-
-func (h *HitbtcApi) fetchPrecision() error {
+func (h *P2pb2bApi) fetchPrecision() error {
 	if h.precisionMap != nil {
 		return nil
 	}
 	h.precisionMap = make(map[string]map[string]models.Precisions)
 
-	url := h.publicApiUrl("ticker")
+	url := h.publicApiUrl("public/tickers")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -141,32 +121,43 @@ func (h *HitbtcApi) fetchPrecision() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	value := gjson.Parse(string(byteArray))
-
-	for _, v := range value.Array() {
-		pair := v.Get("symbol").Str
-		var settlement string
-		var trading string
-		for _, s := range h.settlements {
-			index := strings.LastIndex(pair, s)
-			if index > 0 && index == len(pair)-len(s) {
-				settlement = s
-				trading = pair[0:index]
-			}
+	json, err := gabs.ParseJSON(byteArray)
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse json")
+	}
+	rateMap, err := json.Path("result").ChildrenMap()
+	if err != nil {
+		return errors.Wrapf(err, "failed to parse json")
+	}
+	for k, v := range rateMap {
+		coins := strings.Split(k, "_")
+		if len(coins) != 2 {
+			continue
 		}
+		trading, settlement := coins[0], coins[1]
 		if settlement == "" || trading == "" {
 			continue
 		}
-		last := v.Get("last").Str
+		last, ok := v.Path("ticker").Path("last").Data().(string)
+		if !ok {
+			continue
+		}
+		// update rate
 		_, err = strconv.ParseFloat(last, 64)
 		if err != nil {
+			return err
+		}
+
+		// update volume
+		volume, ok := v.Path("ticker").Path("vol").Data().(string)
+		if !ok {
 			continue
 		}
-		volume := v.Get("volume").Str
 		_, err = strconv.ParseFloat(volume, 64)
 		if err != nil {
-			continue
+			return err
 		}
+
 		m, ok := h.precisionMap[trading]
 		if !ok {
 			m = make(map[string]models.Precisions)
@@ -180,11 +171,11 @@ func (h *HitbtcApi) fetchPrecision() error {
 	return nil
 }
 
-func (h *HitbtcApi) fetchRate() error {
+func (h *P2pb2bApi) fetchRate() error {
 	h.rateMap = make(map[string]map[string]float64)
 	h.volumeMap = make(map[string]map[string]float64)
 	h.orderBookTickMap = make(map[string]map[string]models.OrderBookTick)
-	url := h.publicApiUrl("ticker")
+	url := h.publicApiUrl("public/tickers")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return errors.Wrapf(err, "failed to fetch %s", url)
@@ -196,38 +187,27 @@ func (h *HitbtcApi) fetchRate() error {
 		return errors.Wrapf(err, "failed to fetch %s", url)
 	}
 	json, err := gabs.ParseJSON(byteArray)
-
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
-	rateMap, err := json.Children()
+	rateMap, err := json.Path("result").ChildrenMap()
 	if err != nil {
-		return errors.Wrapf(err, "failed to parse json")
+		return errors.Wrapf(err, "failed to parse json children map")
 	}
-	for _, v := range rateMap {
-		pair, ok := v.Path("symbol").Data().(string)
-		if !ok {
+	for k, v := range rateMap {
+		coins := strings.Split(k, "_")
+		if len(coins) != 2 {
 			continue
 		}
-
-		var settlement string
-		var trading string
-		for _, s := range h.settlements {
-			index := strings.LastIndex(pair, s)
-			if index != -1 && index == len(pair)-len(s) {
-				settlement = s
-				trading = pair[0:index]
-			}
-		}
+		trading, settlement := coins[0], coins[1]
 		if settlement == "" || trading == "" {
 			continue
 		}
-		// update rate
-		last, ok := v.Path("last").Data().(string)
+		last, ok := v.Path("ticker").Path("last").Data().(string)
 		if !ok {
 			continue
 		}
-
+		// update rate
 		lastf, err := strconv.ParseFloat(last, 64)
 		if err != nil {
 			return err
@@ -241,7 +221,7 @@ func (h *HitbtcApi) fetchRate() error {
 		m[settlement] = lastf
 
 		// update volume
-		volume, ok := v.Path("volume").Data().(string)
+		volume, ok := v.Path("ticker").Path("vol").Data().(string)
 		if !ok {
 			continue
 		}
@@ -258,7 +238,7 @@ func (h *HitbtcApi) fetchRate() error {
 		m[settlement] = volumef
 
 		// update orderBookTick
-		askPrice, ok := v.Path("ask").Data().(string)
+		askPrice, ok := v.Path("ticker").Path("ask").Data().(string)
 		if !ok {
 			continue
 		}
@@ -266,7 +246,7 @@ func (h *HitbtcApi) fetchRate() error {
 		if err != nil {
 			return err
 		}
-		bidPrice, ok := v.Path("bid").Data().(string)
+		bidPrice, ok := v.Path("ticker").Path("bid").Data().(string)
 		if !ok {
 			continue
 		}
@@ -289,37 +269,12 @@ func (h *HitbtcApi) fetchRate() error {
 	return nil
 }
 
-func (h *HitbtcApi) fetchOrderBookTick() error {
-	boardMap, err := h.ShrimpyClient.GetBoards("hitbtc")
-	if err != nil {
-		return err
-	}
-	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
-	for settlement, m := range boardMap {
-		for trading, value := range m {
-			l, ok := orderBookTickMap[trading]
-			if !ok {
-				l = make(map[string]models.OrderBookTick)
-				orderBookTickMap[trading] = l
-			}
-			l[settlement] = models.OrderBookTick{
-				BestAskPrice:  value.BestAskPrice(),
-				BestAskAmount: value.BestAskAmount(),
-				BestBidPrice:  value.BestBidPrice(),
-				BestBidAmount: value.BestBidAmount(),
-			}
-		}
-	}
-	h.orderBookTickMap = orderBookTickMap
-	return nil
-}
-
-func (h *HitbtcApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+func (h *P2pb2bApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 	now := time.Now()
 	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
-		err := h.fetchOrderBookTick()
+		err := h.fetchRate()
 		if err != nil {
 			return nil, err
 		}
@@ -328,7 +283,7 @@ func (h *HitbtcApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTi
 	return h.orderBookTickMap, nil
 }
 
-func (h *HitbtcApi) RateMap() (map[string]map[string]float64, error) {
+func (h *P2pb2bApi) RateMap() (map[string]map[string]float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 	now := time.Now()
@@ -342,7 +297,7 @@ func (h *HitbtcApi) RateMap() (map[string]map[string]float64, error) {
 	return h.rateMap, nil
 }
 
-func (h *HitbtcApi) VolumeMap() (map[string]map[string]float64, error) {
+func (h *P2pb2bApi) VolumeMap() (map[string]map[string]float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 	now := time.Now()
@@ -356,7 +311,7 @@ func (h *HitbtcApi) VolumeMap() (map[string]map[string]float64, error) {
 	return h.volumeMap, nil
 }
 
-func (h *HitbtcApi) CurrencyPairs() ([]models.CurrencyPair, error) {
+func (h *P2pb2bApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 
@@ -383,7 +338,7 @@ func (h *HitbtcApi) CurrencyPairs() ([]models.CurrencyPair, error) {
 	return pairs, nil
 }
 
-func (h *HitbtcApi) Precise(trading string, settlement string) (*models.Precisions, error) {
+func (h *P2pb2bApi) Precise(trading string, settlement string) (*models.Precisions, error) {
 	if trading == settlement {
 		return &models.Precisions{}, nil
 	}
@@ -398,7 +353,7 @@ func (h *HitbtcApi) Precise(trading string, settlement string) (*models.Precisio
 	}
 }
 
-func (h *HitbtcApi) Volume(trading string, settlement string) (float64, error) {
+func (h *P2pb2bApi) Volume(trading string, settlement string) (float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 
@@ -419,7 +374,7 @@ func (h *HitbtcApi) Volume(trading string, settlement string) (float64, error) {
 	}
 }
 
-func (h *HitbtcApi) Rate(trading string, settlement string) (float64, error) {
+func (h *P2pb2bApi) Rate(trading string, settlement string) (float64, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 
@@ -444,49 +399,17 @@ func (h *HitbtcApi) Rate(trading string, settlement string) (float64, error) {
 	}
 }
 
-func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
-	url := h.publicApiUrl("currency")
-	resp, err := h.HttpClient.Get(url)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	defer resp.Body.Close()
-
-	byteArray, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch %s", url)
-	}
-	json, err := gabs.ParseJSON(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	currencyMap, err := json.Children()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
+func (h *P2pb2bApi) FrozenCurrency() ([]string, error) {
 	var frozens []string
-	for _, v := range currencyMap {
-		payoutEnable, ok := v.Path("payoutEnabled").Data().(bool)
-		if !ok {
-			continue
-		}
-		if !payoutEnable {
-			currency, ok := v.Path("id").Data().(string)
-			if !ok {
-				continue
-			}
-			frozens = append(frozens, currency)
-		}
-	}
 	return frozens, nil
 }
 
-func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Board, err error) {
+func (h *P2pb2bApi) Board(trading string, settlement string) (board *models.Board, err error) {
 	c, found := h.boardCache.Get(trading + "_" + settlement)
 	if found {
 		return c.(*models.Board), nil
 	}
-	url := h.publicApiUrl("orderbook/" + trading + settlement)
+	url := h.publicApiUrl("public/depth/result?market=" + trading + "_" + settlement + "&limit=100")
 	resp, err := h.HttpClient.Get(url)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
@@ -497,69 +420,38 @@ func (h *HitbtcApi) Board(trading string, settlement string) (board *models.Boar
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch %s", url)
 	}
-	json, err := jason.NewObjectFromBytes(byteArray)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
+	value := gjson.Parse(string(byteArray))
+	if value.Get("code").String() == "-1003" {
+		return nil, errors.Errorf("ip banned %s", url)
 	}
-	jsonBids, err := json.GetObjectArray("bid")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	jsonAsks, err := json.GetObjectArray("ask")
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
-	bids := make([]models.BoardBar, 0)
+	bidsJson := value.Get("bids").Array()
+	asksJson := value.Get("asks").Array()
+
 	asks := make([]models.BoardBar, 0)
-	for _, v := range jsonBids {
-		priceStr, err := v.GetString("price")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		price, err := strconv.ParseFloat(priceStr, 10)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		sizeStr, err := v.GetString("size")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse size")
-		}
-		size, err := strconv.ParseFloat(sizeStr, 10)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse size")
-		}
-		bids = append(bids, models.BoardBar{
-			Price:  price,
-			Amount: size,
+	bids := make([]models.BoardBar, 0)
+	for _, bidJson := range bidsJson {
+		price := bidJson.Array()[0].Float()
+		amount := bidJson.Array()[1].Float()
+		bidBoardBar := models.BoardBar{
 			Type:   models.Bid,
-		})
-	}
-	for _, v := range jsonAsks {
-		priceStr, err := v.GetString("price")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		price, err := strconv.ParseFloat(priceStr, 10)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse price")
-		}
-		sizeStr, err := v.GetString("size")
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse size")
-		}
-		size, err := strconv.ParseFloat(sizeStr, 10)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse size")
-		}
-		asks = append(asks, models.BoardBar{
 			Price:  price,
-			Amount: size,
+			Amount: amount,
+		}
+		bids = append(bids, bidBoardBar)
+	}
+	for _, askJson := range asksJson {
+		price := askJson.Array()[0].Float()
+		amount := askJson.Array()[1].Float()
+		askBoardBar := models.BoardBar{
 			Type:   models.Ask,
-		})
+			Price:  price,
+			Amount: amount,
+		}
+		asks = append(asks, askBoardBar)
 	}
 	board = &models.Board{
-		Bids: bids,
 		Asks: asks,
+		Bids: bids,
 	}
 	h.boardCache.Set(trading+"_"+settlement, board, cache.DefaultExpiration)
 	return board, nil

@@ -15,11 +15,11 @@ var (
 
 //go:generate mockery -name=PublicClient
 type PublicClient interface {
-	Volume(trading string, settlement string) (float64, error)
+	// Volume(trading string, settlement string) (float64, error)
 	CurrencyPairs() ([]models.CurrencyPair, error)
-	Rate(trading string, settlement string) (float64, error)
-	RateMap() (map[string]map[string]float64, error)
-	VolumeMap() (map[string]map[string]float64, error)
+	// Rate(trading string, settlement string) (float64, error)
+	// RateMap() (map[string]map[string]float64, error)
+	// VolumeMap() (map[string]map[string]float64, error)
 	OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error)
 	FrozenCurrency() ([]string, error)
 	Board(trading string, settlement string) (*models.Board, error)
@@ -62,7 +62,7 @@ func NewClient(exchangeName string) (PublicClient, error) {
 		return NewLbankPublicApi()
 	case "kucoin":
 		return NewKucoinPublicApi()
-	/*case "p2pb2b":
+		/*case "p2pb2b":
 		return NewP2pb2bPublicApi()*/
 	}
 	return nil, errors.New("failed to init exchange api")

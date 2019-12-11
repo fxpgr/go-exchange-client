@@ -6,8 +6,10 @@ import (
 )
 
 type OrderBookTick struct {
-	BestAskPrice float64
-	BestBidPrice float64
+	BestAskPrice  float64
+	BestAskAmount float64
+	BestBidPrice  float64
+	BestBidAmount float64
 }
 
 type BoardBar struct {

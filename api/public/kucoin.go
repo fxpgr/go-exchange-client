@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/antonholmquist/jason"
+	"github.com/fxpgr/go-exchange-client/api/unified"
 	"github.com/fxpgr/go-exchange-client/models"
 	cache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
@@ -21,6 +22,10 @@ const (
 )
 
 func NewKucoinPublicApi() (*KucoinApi, error) {
+	shrimpyApi, err := unified.NewShrimpyApi()
+	if err != nil {
+		return nil, err
+	}
 	api := &KucoinApi{
 		BaseURL:           KUCOIN_BASE_URL,
 		RateCacheDuration: 3 * time.Second,
@@ -30,6 +35,7 @@ func NewKucoinPublicApi() (*KucoinApi, error) {
 		rateLastUpdated:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        &http.Client{Timeout: time.Duration(10) * time.Second},
+		ShrimpyClient:     shrimpyApi,
 		rt:                &http.Transport{},
 
 		m:         new(sync.Mutex),
@@ -50,6 +56,7 @@ type KucoinApi struct {
 	precisionMap      map[string]map[string]models.Precisions
 	boardCache        *cache.Cache
 	currencyPairs     []models.CurrencyPair
+	ShrimpyClient     *unified.ShrimpyApiClient
 
 	HttpClient *http.Client
 	rt         http.RoundTripper
@@ -73,6 +80,45 @@ func (h *KucoinApi) publicApiUrl(command string) string {
 func (h *KucoinApi) fetchSettlements() error {
 	h.settlements = []string{"BTC", "ETH", "NEO", "USDT", "KCS"}
 	return nil
+}
+
+func (h *KucoinApi) fetchOrderBookTick() error {
+	boardMap, err := h.ShrimpyClient.GetBoards("kucoin")
+	if err != nil {
+		return err
+	}
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
+	for settlement, m := range boardMap {
+		for trading, value := range m {
+			l, ok := orderBookTickMap[trading]
+			if !ok {
+				l = make(map[string]models.OrderBookTick)
+				orderBookTickMap[trading] = l
+			}
+			l[settlement] = models.OrderBookTick{
+				BestAskPrice:  value.BestAskPrice(),
+				BestAskAmount: value.BestAskAmount(),
+				BestBidPrice:  value.BestBidPrice(),
+				BestBidAmount: value.BestBidAmount(),
+			}
+		}
+	}
+	h.orderBookTickMap = orderBookTickMap
+	return nil
+}
+
+func (h *KucoinApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	now := time.Now()
+	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
+		err := h.fetchOrderBookTick()
+		if err != nil {
+			return nil, err
+		}
+		h.rateLastUpdated = now
+	}
+	return h.orderBookTickMap, nil
 }
 
 type KucoinTickResponse struct {
@@ -255,20 +301,6 @@ func (h *KucoinApi) Precise(trading string, settlement string) (*models.Precisio
 	} else {
 		return &precisions, nil
 	}
-}
-
-func (h *KucoinApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
-	h.m.Lock()
-	defer h.m.Unlock()
-	now := time.Now()
-	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
-		err := h.fetchRate()
-		if err != nil {
-			return nil, err
-		}
-		h.rateLastUpdated = now
-	}
-	return h.orderBookTickMap, nil
 }
 
 func (h *KucoinApi) VolumeMap() (map[string]map[string]float64, error) {

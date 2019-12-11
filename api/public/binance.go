@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fxpgr/go-exchange-client/api/unified"
 	"github.com/fxpgr/go-exchange-client/models"
 	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
@@ -20,6 +21,10 @@ const (
 func NewBinancePublicApi() (*BinanceApi, error) {
 	cli := &http.Client{}
 	cli.Timeout = 20 * time.Second
+	shrimpyApi, err := unified.NewShrimpyApi()
+	if err != nil {
+		return nil, err
+	}
 	api := &BinanceApi{
 		BaseURL:           BINANCE_BASE_URL,
 		RateCacheDuration: 3 * time.Second,
@@ -30,11 +35,11 @@ func NewBinancePublicApi() (*BinanceApi, error) {
 		boardCache:        cache.New(3*time.Second, 1*time.Second),
 		boardTickerCache:  cache.New(3*time.Second, 1*time.Second),
 		HttpClient:        cli,
-
-		m:            new(sync.Mutex),
-		rateM:        new(sync.Mutex),
-		currencyM:    new(sync.Mutex),
-		boardTickerM: new(sync.Mutex),
+		ShrimpyClient:     shrimpyApi,
+		m:                 new(sync.Mutex),
+		rateM:             new(sync.Mutex),
+		currencyM:         new(sync.Mutex),
+		boardTickerM:      new(sync.Mutex),
 	}
 	api.fetchSettlements()
 	return api, nil
@@ -52,7 +57,8 @@ type BinanceApi struct {
 	boardTickerCache  *cache.Cache
 	currencyPairs     []models.CurrencyPair
 
-	HttpClient *http.Client
+	HttpClient    *http.Client
+	ShrimpyClient *unified.ShrimpyApiClient
 
 	settlements  []string
 	m            *sync.Mutex
@@ -206,12 +212,37 @@ func (h *BinanceApi) fetchRate() error {
 	return nil
 }
 
+func (h *BinanceApi) fetchOrderBookTick() error {
+	boardMap, err := h.ShrimpyClient.GetBoards("binance")
+	if err != nil {
+		return err
+	}
+	orderBookTickMap := make(map[string]map[string]models.OrderBookTick)
+	for settlement, m := range boardMap {
+		for trading, value := range m {
+			l, ok := orderBookTickMap[trading]
+			if !ok {
+				l = make(map[string]models.OrderBookTick)
+				orderBookTickMap[trading] = l
+			}
+			l[settlement] = models.OrderBookTick{
+				BestAskPrice:  value.BestAskPrice(),
+				BestAskAmount: value.BestAskAmount(),
+				BestBidPrice:  value.BestBidPrice(),
+				BestBidAmount: value.BestBidAmount(),
+			}
+		}
+	}
+	h.orderBookTickMap = orderBookTickMap
+	return nil
+}
+
 func (h *BinanceApi) OrderBookTickMap() (map[string]map[string]models.OrderBookTick, error) {
 	h.m.Lock()
 	defer h.m.Unlock()
 	now := time.Now()
 	if now.Sub(h.rateLastUpdated) >= h.RateCacheDuration {
-		err := h.fetchRate()
+		err := h.fetchOrderBookTick()
 		if err != nil {
 			return nil, err
 		}
