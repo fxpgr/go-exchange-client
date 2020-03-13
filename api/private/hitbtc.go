@@ -128,10 +128,7 @@ func (h *HitbtcApi) TradeFeeRates() (map[string]map[string]TradeFee, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	symbolMap, err := json.Children()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse json")
-	}
+	symbolMap := json.Children()
 	traderFeeMap := make(map[string]map[string]TradeFee)
 	for _, v := range symbolMap {
 		takeLiquidityRateStr, ok := v.Path("takeLiquidityRate").Data().(string)
@@ -192,7 +189,7 @@ func (h *HitbtcApi) TransferFee() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 	}
-	currencyMap, err := json.Children()
+	currencyMap := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json: %v", string(resBody))
 	}
@@ -224,7 +221,7 @@ func (h *HitbtcApi) Balances() (map[string]float64, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	rateMap, err := json.Children()
+	rateMap := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
@@ -258,7 +255,7 @@ func (h *HitbtcApi) CompleteBalances() (map[string]*models.Balance, error) {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 
-	rateMap, err := json.Children()
+	rateMap := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
@@ -301,7 +298,7 @@ func (h *HitbtcApi) CompleteBalance(coin string) (*models.Balance, error) {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
 
-	rateMap, err := json.Children()
+	rateMap := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
@@ -355,7 +352,7 @@ func (h *HitbtcApi) ActiveOrders() ([]*models.Order, error) {
 		return nil, err
 	}
 	json, err := gabs.ParseJSON(bs)
-	m, err := json.Children()
+	m := json.Children()
 	if err != nil {
 		return nil, err
 	}

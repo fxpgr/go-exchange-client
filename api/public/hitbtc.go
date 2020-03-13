@@ -93,7 +93,7 @@ func (h *HitbtcApi) fetchSettlements() error {
 		return errors.Wrapf(err, "failed to parse json")
 	}
 
-	pairMap, err := json.Children()
+	pairMap := json.Children()
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
@@ -200,7 +200,7 @@ func (h *HitbtcApi) fetchRate() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
-	rateMap, err := json.Children()
+	rateMap := json.Children()
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse json")
 	}
@@ -460,7 +460,7 @@ func (h *HitbtcApi) FrozenCurrency() ([]string, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
-	currencyMap, err := json.Children()
+	currencyMap := json.Children()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to parse json")
 	}
